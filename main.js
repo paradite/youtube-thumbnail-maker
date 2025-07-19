@@ -22,6 +22,10 @@ class CanvasManager {
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
         this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
         this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        
+        this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this));
+        this.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this));
+        this.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
     }
     
     handleMouseDown(e) {
@@ -43,6 +47,33 @@ class CanvasManager {
     }
     
     handleMouseUp(e) {
+        this.selectedElement = null;
+    }
+    
+    handleTouchStart(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = this.canvas.getBoundingClientRect();
+        const x = (touch.clientX - rect.left) * (this.canvas.width / rect.width);
+        const y = (touch.clientY - rect.top) * (this.canvas.height / rect.height);
+        
+        console.log('Touch start at:', x, y);
+    }
+    
+    handleTouchMove(e) {
+        e.preventDefault();
+        if (this.selectedElement && e.touches[0]) {
+            const touch = e.touches[0];
+            const rect = this.canvas.getBoundingClientRect();
+            const x = (touch.clientX - rect.left) * (this.canvas.width / rect.width);
+            const y = (touch.clientY - rect.top) * (this.canvas.height / rect.height);
+            
+            console.log('Touch move at:', x, y);
+        }
+    }
+    
+    handleTouchEnd(e) {
+        e.preventDefault();
         this.selectedElement = null;
     }
     
