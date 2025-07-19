@@ -1,4 +1,5 @@
 import { TextElement } from '../elements/TextElement.js';
+import { ImageElement } from '../elements/ImageElement.js';
 import { BackgroundRenderer } from '../utils/backgroundRenderer.js';
 
 export class CanvasManager {
@@ -68,12 +69,25 @@ export class CanvasManager {
                     if (handleType === 'rotate') {
                         this.isRotating = true;
                         this.initialRotation = element.rotation;
-                        this.rotationCenter = { x: element.x, y: element.y + element.size / 2 };
+                        
+                        // Different rotation center for text vs image
+                        if (element.text !== undefined) {
+                            this.rotationCenter = { x: element.x, y: element.y + element.size / 2 };
+                        } else if (element.image) {
+                            this.rotationCenter = { x: element.x + element.width / 2, y: element.y + element.height / 2 };
+                        }
                         this.initialMousePos = { x, y };
                     } else {
                         this.isResizing = true;
                         this.resizeHandle = handleType;
-                        this.initialSize = element.size;
+                        
+                        // Store initial size for both text and image elements
+                        if (element.text !== undefined) {
+                            this.initialSize = element.size;
+                        } else if (element.image) {
+                            this.initialWidth = element.width;
+                            this.initialHeight = element.height;
+                        }
                         this.initialMousePos = { x, y };
                     }
                     break;
@@ -128,16 +142,31 @@ export class CanvasManager {
             this.canvas.style.cursor = 'nw-resize';
             const deltaX = x - this.initialMousePos.x;
             const deltaY = y - this.initialMousePos.y;
-            const scaleFactor = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / 50;
             
-            let newSize = this.initialSize;
-            if (deltaX > 0 || deltaY > 0) {
-                newSize = Math.max(12, this.initialSize + scaleFactor * 20);
-            } else {
-                newSize = Math.max(12, this.initialSize - scaleFactor * 20);
+            if (this.selectedElement.text !== undefined) {
+                // Text element resizing (existing logic)
+                const scaleFactor = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / 50;
+                
+                let newSize = this.initialSize;
+                if (deltaX > 0 || deltaY > 0) {
+                    newSize = Math.max(12, this.initialSize + scaleFactor * 20);
+                } else {
+                    newSize = Math.max(12, this.initialSize - scaleFactor * 20);
+                }
+                
+                this.selectedElement.size = Math.round(newSize);
+            } else if (this.selectedElement.image) {
+                // Image element resizing
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                const scaleFactor = deltaX > 0 || deltaY > 0 ? 1 + distance / 200 : 1 - distance / 200;
+                
+                const newWidth = Math.max(20, this.initialWidth * scaleFactor);
+                const newHeight = Math.max(20, this.initialHeight * scaleFactor);
+                
+                this.selectedElement.width = Math.round(newWidth);
+                this.selectedElement.height = Math.round(newHeight);
             }
             
-            this.selectedElement.size = Math.round(newSize);
             this.redrawCanvas();
         } else if (this.isDragging && this.selectedElement) {
             this.canvas.style.cursor = 'move';
@@ -268,6 +297,41 @@ export class CanvasManager {
         return textElement;
     }
     
+    addImageElement(image, x = 100, y = 100) {
+        // Scale image to fit within reasonable bounds while maintaining aspect ratio
+        const maxWidth = this.canvas.width * 0.4; // Max 40% of canvas width
+        const maxHeight = this.canvas.height * 0.4; // Max 40% of canvas height
+        
+        let width = image.width;
+        let height = image.height;
+        
+        // Scale down if image is too large
+        if (width > maxWidth || height > maxHeight) {
+            const scale = Math.min(maxWidth / width, maxHeight / height);
+            width *= scale;
+            height *= scale;
+        }
+        
+        const imageElement = new ImageElement(x, y, image, { width, height });
+        this.elements.push(imageElement);
+        this.selectedElement = imageElement;
+        imageElement.selected = true;
+        
+        this.elements.forEach(element => {
+            if (element !== imageElement) {
+                element.selected = false;
+            }
+        });
+        
+        if (this.onSelectionChange) {
+            this.onSelectionChange(imageElement);
+        }
+        
+        this.redrawCanvas();
+        this.saveToLocalStorage();
+        return imageElement;
+    }
+    
     updateSelectedElement(options) {
         if (this.selectedElement && this.selectedElement.update) {
             this.selectedElement.update(options);
@@ -280,6 +344,25 @@ export class CanvasManager {
         }
     }
     
+    deleteSelectedElement() {
+        if (this.selectedElement) {
+            const index = this.elements.indexOf(this.selectedElement);
+            if (index > -1) {
+                this.elements.splice(index, 1);
+                this.selectedElement = null;
+                
+                if (this.onSelectionChange) {
+                    this.onSelectionChange(null);
+                }
+                
+                this.redrawCanvas();
+                this.saveToLocalStorage();
+                return true;
+            }
+        }
+        return false;
+    }
+    
     exportAsImage(format = 'image/jpeg', quality = 0.9) {
         return this.canvas.toDataURL(format, quality);
     }
@@ -289,7 +372,21 @@ export class CanvasManager {
             elements: this.elements.map(element => {
                 const serialized = { ...element };
                 delete serialized.selected;
-                serialized.type = 'text';
+                
+                if (element.text !== undefined) {
+                    serialized.type = 'text';
+                } else if (element.image) {
+                    serialized.type = 'image';
+                    // Convert image to data URL for storage
+                    const canvas = document.createElement('canvas');
+                    canvas.width = element.originalWidth;
+                    canvas.height = element.originalHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(element.image, 0, 0);
+                    serialized.imageData = canvas.toDataURL();
+                    delete serialized.image; // Remove the actual image object
+                }
+                
                 return serialized;
             }),
             backgroundColor: this.currentBackgroundColor,
@@ -320,28 +417,53 @@ export class CanvasManager {
                 this.elements = [];
                 this.selectedElement = null;
                 
-                projectData.elements.forEach(elementData => {
-                    if (elementData.type === 'text') {
-                        const { type, ...elementProps } = elementData;
-                        const textElement = Object.assign(new TextElement(0, 0, ''), elementProps);
-                        if (elementProps.rotation === undefined) {
-                            textElement.rotation = 0;
+                const loadPromises = projectData.elements.map(elementData => {
+                    return new Promise((resolve) => {
+                        if (elementData.type === 'text') {
+                            const { type, ...elementProps } = elementData;
+                            const textElement = Object.assign(new TextElement(0, 0, ''), elementProps);
+                            if (elementProps.rotation === undefined) {
+                                textElement.rotation = 0;
+                            }
+                            this.elements.push(textElement);
+                            resolve();
+                        } else if (elementData.type === 'image' && elementData.imageData) {
+                            const img = new Image();
+                            img.onload = () => {
+                                const { type, imageData, ...elementProps } = elementData;
+                                const imageElement = Object.assign(new ImageElement(0, 0, img), elementProps);
+                                imageElement.image = img;
+                                if (elementProps.rotation === undefined) {
+                                    imageElement.rotation = 0;
+                                }
+                                this.elements.push(imageElement);
+                                resolve();
+                            };
+                            img.onerror = () => {
+                                console.error('Failed to load saved image');
+                                resolve();
+                            };
+                            img.src = elementData.imageData;
+                        } else {
+                            resolve();
                         }
-                        this.elements.push(textElement);
-                    }
+                    });
                 });
                 
-                if (projectData.backgroundColor) {
-                    this.currentBackgroundColor = projectData.backgroundColor;
-                }
+                Promise.all(loadPromises).then(() => {
+                    if (projectData.backgroundColor) {
+                        this.currentBackgroundColor = projectData.backgroundColor;
+                    }
+                    
+                    if (projectData.backgroundPattern) {
+                        this.currentBackgroundPattern = projectData.backgroundPattern;
+                    }
+                    
+                    this.redrawCanvas();
+                    this.updateUIAfterLoad();
+                    console.log('Project loaded from localStorage');
+                });
                 
-                if (projectData.backgroundPattern) {
-                    this.currentBackgroundPattern = projectData.backgroundPattern;
-                }
-                
-                this.redrawCanvas();
-                this.updateUIAfterLoad();
-                console.log('Project loaded from localStorage');
                 return true;
             }
         } catch (error) {

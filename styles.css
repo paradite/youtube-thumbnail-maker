@@ -184,6 +184,23 @@ header h1 {
     background: #cc0000;
 }
 
+.btn-danger {
+    background: #dc3545;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+    background: #ccc;
+}
+
 .btn:last-child {
     margin-bottom: 0;
 }

@@ -48,7 +48,45 @@ export class UIController {
         
         imageUpload.addEventListener('change', (e) => {
             if (e.target.files && e.target.files[0]) {
-                console.log('Image selected:', e.target.files[0].name);
+                const file = e.target.files[0];
+                
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Please select a valid image file (JPG, PNG, or WebP)');
+                    return;
+                }
+                
+                // Validate file size (max 10MB)
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                if (file.size > maxSize) {
+                    alert('Image file is too large. Please select a file smaller than 10MB.');
+                    return;
+                }
+                
+                console.log('Processing image:', file.name);
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        console.log('Image loaded:', img.width + 'x' + img.height);
+                        this.canvasManager.addImageElement(img);
+                        
+                        // Clear the file input so the same file can be selected again
+                        imageUpload.value = '';
+                    };
+                    img.onerror = () => {
+                        alert('Failed to load the selected image. Please try a different file.');
+                        imageUpload.value = '';
+                    };
+                    img.src = event.target.result;
+                };
+                reader.onerror = () => {
+                    alert('Failed to read the selected file. Please try again.');
+                    imageUpload.value = '';
+                };
+                reader.readAsDataURL(file);
             }
         });
         
@@ -62,7 +100,13 @@ export class UIController {
             this.downloadImage('png');
         });
         
+        const deleteBtn = document.getElementById('delete-element');
+        deleteBtn.addEventListener('click', () => {
+            this.canvasManager.deleteSelectedElement();
+        });
+        
         this.setupTextControls();
+        this.setupKeyboardShortcuts();
     }
     
     setupTextControls() {
@@ -125,10 +169,19 @@ export class UIController {
     }
     
     handleSelectionChange(selectedElement) {
-        if (selectedElement && selectedElement.text !== undefined) {
-            this.showTextControls();
-            this.updateTextControls();
+        const deleteBtn = document.getElementById('delete-element');
+        
+        if (selectedElement) {
+            deleteBtn.disabled = false;
+            
+            if (selectedElement.text !== undefined) {
+                this.showTextControls();
+                this.updateTextControls();
+            } else {
+                this.hideTextControls();
+            }
         } else {
+            deleteBtn.disabled = true;
             this.hideTextControls();
         }
     }
@@ -171,5 +224,32 @@ export class UIController {
         bgColorInput.value = this.canvasManager.currentBackgroundColor;
         this.updateColorPalette(this.canvasManager.currentBackgroundColor);
         this.updatePatternButtons(this.canvasManager.currentBackgroundPattern);
+    }
+    
+    setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Only handle keyboard shortcuts when not focused on an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            // Delete or Backspace key to delete selected element
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                e.preventDefault();
+                this.canvasManager.deleteSelectedElement();
+            }
+            
+            // Escape key to deselect
+            if (e.key === 'Escape') {
+                this.canvasManager.selectedElement = null;
+                this.canvasManager.elements.forEach(element => {
+                    element.selected = false;
+                });
+                this.canvasManager.redrawCanvas();
+                if (this.canvasManager.onSelectionChange) {
+                    this.canvasManager.onSelectionChange(null);
+                }
+            }
+        });
     }
 }
