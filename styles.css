@@ -40,7 +40,9 @@ header h1 {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     padding: 20px;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
 }
 
 #thumbnail-canvas {
@@ -48,6 +50,89 @@ header h1 {
     border-radius: 4px;
     max-width: 100%;
     height: auto;
+}
+
+.canvas-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 800px;
+}
+
+.canvas-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.canvas-actions .btn {
+    width: auto;
+    margin-bottom: 0;
+    min-width: 120px;
+}
+
+
+.canvas-controls .text-controls,
+.canvas-controls .image-controls {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 0;
+    border-top: none;
+}
+
+.canvas-controls .controls-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-start;
+}
+
+.canvas-controls h4 {
+    margin: 0 0 15px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+}
+
+.canvas-controls .control-group {
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.canvas-controls .control-group label {
+    margin-bottom: 0;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+.canvas-controls .control-group input[type="text"],
+.canvas-controls .control-group select {
+    width: auto;
+    min-width: 120px;
+}
+
+.canvas-controls .control-group input[type="range"] {
+    width: 120px;
+    margin-right: 5px;
+}
+
+.canvas-controls .control-group input[type="color"] {
+    width: 40px;
+    height: 35px;
+}
+
+.canvas-controls .btn {
+    width: auto;
+    margin-bottom: 0;
+    min-width: 100px;
 }
 
 .toolbar {
@@ -205,7 +290,7 @@ header h1 {
     margin-bottom: 0;
 }
 
-.text-controls, .image-controls {
+.toolbar .text-controls, .toolbar .image-controls {
     margin-top: 15px;
     padding-top: 15px;
     border-top: 1px solid #eee;

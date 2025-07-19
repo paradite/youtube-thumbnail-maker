@@ -65,13 +65,11 @@ Build a simple web-based YouTube thumbnail maker with drag-and-drop editing capa
    - Implement image filters and effects
    - Support image rotation and transparency
 
-### Phase 5: Drag-and-Drop Editor
+### Phase 5: Interactive Editor
 
 9. **Interactive editing system**
 
-   - Implement universal drag-and-drop for all elements
-   - Add selection indicators and handles
-   - Support multi-element selection
+   - Interactive cropping of image
    - Add layer management (bring to front/back)
 
 10. **Transform controls**
