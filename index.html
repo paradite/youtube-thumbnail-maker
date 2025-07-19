@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Thumbnail Maker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>YouTube Thumbnail Maker</h1>
+        </header>
+        
+        <main>
+            <div class="editor-area">
+                <div class="canvas-container">
+                    <canvas id="thumbnail-canvas" width="1280" height="720"></canvas>
+                </div>
+                
+                <div class="toolbar">
+                    <div class="tool-section">
+                        <h3>Background</h3>
+                        <div class="color-picker">
+                            <input type="color" id="bg-color" value="#ffffff">
+                            <label for="bg-color">Background Color</label>
+                        </div>
+                    </div>
+                    
+                    <div class="tool-section">
+                        <h3>Text</h3>
+                        <button id="add-text" class="btn">Add Text</button>
+                    </div>
+                    
+                    <div class="tool-section">
+                        <h3>Image</h3>
+                        <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                        <button id="add-image" class="btn">Add Image</button>
+                    </div>
+                    
+                    <div class="tool-section">
+                        <h3>Export</h3>
+                        <button id="export-jpg" class="btn">Download JPG</button>
+                        <button id="export-png" class="btn">Download PNG</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>
