@@ -95,6 +95,7 @@ class CanvasManager {
     init() {
         this.clearCanvas();
         this.setupEventListeners();
+        this.loadFromLocalStorage();
     }
     
     clearCanvas() {
@@ -158,6 +159,9 @@ class CanvasManager {
     }
     
     handleMouseUp(e) {
+        if (this.isDragging) {
+            this.saveToLocalStorage();
+        }
         this.isDragging = false;
     }
     
@@ -192,12 +196,14 @@ class CanvasManager {
         this.currentBackgroundColor = color;
         this.renderBackground();
         this.redraw();
+        this.saveToLocalStorage();
     }
     
     setBackgroundPattern(pattern) {
         this.currentBackgroundPattern = pattern;
         this.renderBackground();
         this.redraw();
+        this.saveToLocalStorage();
     }
     
     renderBackground() {
@@ -299,6 +305,7 @@ class CanvasManager {
         }
         
         this.redrawCanvas();
+        this.saveToLocalStorage();
         return textElement;
     }
     
@@ -306,11 +313,82 @@ class CanvasManager {
         if (this.selectedElement && this.selectedElement.update) {
             this.selectedElement.update(options);
             this.redrawCanvas();
+            this.saveToLocalStorage();
         }
     }
     
     exportAsImage(format = 'image/jpeg', quality = 0.9) {
         return this.canvas.toDataURL(format, quality);
+    }
+    
+    saveToLocalStorage() {
+        const projectData = {
+            elements: this.elements.map(element => {
+                const serialized = { ...element };
+                delete serialized.selected;
+                serialized.type = 'text';
+                return serialized;
+            }),
+            backgroundColor: this.currentBackgroundColor,
+            backgroundPattern: this.currentBackgroundPattern,
+            version: '1.0',
+            timestamp: Date.now()
+        };
+        
+        try {
+            localStorage.setItem('youtube-thumbnail-project', JSON.stringify(projectData));
+            console.log('Project saved to localStorage');
+        } catch (error) {
+            console.error('Failed to save project to localStorage:', error);
+        }
+    }
+    
+    loadFromLocalStorage() {
+        try {
+            const savedData = localStorage.getItem('youtube-thumbnail-project');
+            if (!savedData) {
+                console.log('No saved project found');
+                return false;
+            }
+            
+            const projectData = JSON.parse(savedData);
+            
+            if (projectData.version && projectData.elements) {
+                this.elements = [];
+                this.selectedElement = null;
+                
+                projectData.elements.forEach(elementData => {
+                    if (elementData.type === 'text') {
+                        const { type, ...elementProps } = elementData;
+                        const textElement = Object.assign(new TextElement(0, 0, ''), elementProps);
+                        this.elements.push(textElement);
+                    }
+                });
+                
+                if (projectData.backgroundColor) {
+                    this.currentBackgroundColor = projectData.backgroundColor;
+                }
+                
+                if (projectData.backgroundPattern) {
+                    this.currentBackgroundPattern = projectData.backgroundPattern;
+                }
+                
+                this.redrawCanvas();
+                this.updateUIAfterLoad();
+                console.log('Project loaded from localStorage');
+                return true;
+            }
+        } catch (error) {
+            console.error('Failed to load project from localStorage:', error);
+        }
+        
+        return false;
+    }
+    
+    updateUIAfterLoad() {
+        if (this.onUIUpdate) {
+            this.onUIUpdate();
+        }
     }
 }
 
@@ -318,6 +396,7 @@ class UIController {
     constructor(canvasManager) {
         this.canvasManager = canvasManager;
         this.canvasManager.onSelectionChange = this.handleSelectionChange.bind(this);
+        this.canvasManager.onUIUpdate = this.updateUIFromLoadedData.bind(this);
         this.setupEventListeners();
     }
     
@@ -479,6 +558,13 @@ class UIController {
                 button.classList.add('active');
             }
         });
+    }
+    
+    updateUIFromLoadedData() {
+        const bgColorInput = document.getElementById('bg-color');
+        bgColorInput.value = this.canvasManager.currentBackgroundColor;
+        this.updateColorPalette(this.canvasManager.currentBackgroundColor);
+        this.updatePatternButtons(this.canvasManager.currentBackgroundPattern);
     }
 }
 
