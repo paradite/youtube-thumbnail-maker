@@ -95,6 +95,77 @@ header h1 {
     color: #666;
 }
 
+.color-palette {
+    margin-top: 15px;
+}
+
+.color-palette h4,
+.pattern-options h4 {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    color: #333;
+    font-weight: 500;
+}
+
+.palette-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.palette-color {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.1s;
+}
+
+.palette-color:hover {
+    border-color: #ff0000;
+    transform: scale(1.05);
+}
+
+.palette-color.selected {
+    border-color: #ff0000;
+    border-width: 3px;
+}
+
+.pattern-options {
+    margin-top: 15px;
+}
+
+.pattern-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.pattern-btn {
+    background: #f8f8f8;
+    border: 2px solid #ddd;
+    padding: 10px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #333;
+    transition: all 0.2s;
+}
+
+.pattern-btn:hover {
+    border-color: #ff0000;
+    background: #fff;
+}
+
+.pattern-btn.active {
+    background: #ff0000;
+    color: white;
+    border-color: #ff0000;
+}
+
 .btn {
     background: #ff0000;
     color: white;
