@@ -21,10 +21,35 @@ export class ImageElement {
         this.cropWidth = this.originalWidth;
         this.cropHeight = this.originalHeight;
         this.cropMode = false;
+        
+        // Image effects properties
+        this.opacity = options.opacity !== undefined ? options.opacity : 1.0;
+        this.brightness = options.brightness !== undefined ? options.brightness : 100;
+        this.contrast = options.contrast !== undefined ? options.contrast : 100;
+        this.saturation = options.saturation !== undefined ? options.saturation : 100;
     }
     
     render(ctx) {
         ctx.save();
+        
+        // Apply opacity
+        ctx.globalAlpha = this.opacity;
+        
+        // Apply filters
+        const filters = [];
+        if (this.brightness !== 100) {
+            filters.push(`brightness(${this.brightness}%)`);
+        }
+        if (this.contrast !== 100) {
+            filters.push(`contrast(${this.contrast}%)`);
+        }
+        if (this.saturation !== 100) {
+            filters.push(`saturate(${this.saturation}%)`);
+        }
+        
+        if (filters.length > 0) {
+            ctx.filter = filters.join(' ');
+        }
         
         if (this.rotation !== 0) {
             ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
@@ -195,6 +220,10 @@ export class ImageElement {
             }
         }
         if (options.rotation !== undefined) this.rotation = options.rotation;
+        if (options.opacity !== undefined) this.opacity = options.opacity;
+        if (options.brightness !== undefined) this.brightness = options.brightness;
+        if (options.contrast !== undefined) this.contrast = options.contrast;
+        if (options.saturation !== undefined) this.saturation = options.saturation;
     }
     
     // Scale the image while maintaining aspect ratio

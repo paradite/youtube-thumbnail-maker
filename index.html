@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Thumbnail Maker</title>
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- Person Segmentation Library -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0"></script>
 </head>
 <body>
     <div class="container">
@@ -76,7 +80,44 @@
                         <div id="image-controls" class="image-controls" style="display: none;">
                             <h4>Image Settings</h4>
                             <div class="controls-row">
-                                <button id="crop-image" class="btn">Crop Image</button>
+                                <div class="control-group">
+                                    <label for="image-opacity">Opacity:</label>
+                                    <input type="range" id="image-opacity" min="0" max="100" value="100">
+                                    <span id="image-opacity-value">100%</span>
+                                </div>
+                                
+                                <div class="control-group">
+                                    <label for="image-brightness">Brightness:</label>
+                                    <input type="range" id="image-brightness" min="0" max="200" value="100">
+                                    <span id="image-brightness-value">100%</span>
+                                </div>
+                                
+                                <div class="control-group">
+                                    <label for="image-contrast">Contrast:</label>
+                                    <input type="range" id="image-contrast" min="0" max="200" value="100">
+                                    <span id="image-contrast-value">100%</span>
+                                </div>
+                                
+                                <div class="control-group">
+                                    <label for="image-saturation">Saturation:</label>
+                                    <input type="range" id="image-saturation" min="0" max="200" value="100">
+                                    <span id="image-saturation-value">100%</span>
+                                </div>
+                                
+                                <div class="control-group">
+                                    <label for="image-rotation">Rotation:</label>
+                                    <input type="range" id="image-rotation" min="0" max="360" value="0">
+                                    <span id="image-rotation-value">0°</span>
+                                </div>
+                                
+                                <div class="control-group">
+                                    <button id="crop-image" class="btn">Crop Image</button>
+                                    <button id="extract-person" class="btn" disabled>Extract Person</button>
+                                </div>
+                                
+                                <div class="control-group">
+                                    <div id="model-status" class="model-status">Loading AI model...</div>
+                                </div>
                                 
                                 <div id="crop-controls" class="crop-controls" style="display: none;">
                                     <div class="control-group">

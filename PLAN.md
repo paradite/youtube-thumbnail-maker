@@ -60,16 +60,15 @@ Build a simple web-based YouTube thumbnail maker with drag-and-drop editing capa
    - Support common formats (JPG, PNG, WebP) ✅
    - Implement image scaling and cropping ✅
 
-8. **Advanced image features**
-   - Add basic face detection/masking (using browser APIs if available)
-   - Implement image filters and effects
-   - Support image rotation and transparency
+8. **Advanced image features** ✅
+   - Add basic face detection/masking (using browser APIs if available) ✅
+   - Implement image filters and effects ✅
+   - Support image rotation and transparency ✅
 
 ### Phase 5: Interactive Editor
 
 9. **Interactive editing system**
 
-   - Interactive cropping of image
    - Add layer management (bring to front/back)
 
 10. **Transform controls**

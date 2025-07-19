@@ -182,6 +182,7 @@ export class UIController {
             } else {
                 this.hideTextControls();
                 this.showImageControls();
+                this.updateImageControls();
             }
         } else {
             deleteBtn.disabled = true;
@@ -234,6 +235,19 @@ export class UIController {
         const cropBtn = document.getElementById('crop-image');
         const applyCropBtn = document.getElementById('apply-crop');
         const cancelCropBtn = document.getElementById('cancel-crop');
+        const extractPersonBtn = document.getElementById('extract-person');
+        
+        // Image effects controls
+        const opacityInput = document.getElementById('image-opacity');
+        const opacityValue = document.getElementById('image-opacity-value');
+        const brightnessInput = document.getElementById('image-brightness');
+        const brightnessValue = document.getElementById('image-brightness-value');
+        const contrastInput = document.getElementById('image-contrast');
+        const contrastValue = document.getElementById('image-contrast-value');
+        const saturationInput = document.getElementById('image-saturation');
+        const saturationValue = document.getElementById('image-saturation-value');
+        const rotationInput = document.getElementById('image-rotation');
+        const rotationValue = document.getElementById('image-rotation-value');
         
         cropBtn.addEventListener('click', () => {
             this.startCropping();
@@ -246,6 +260,45 @@ export class UIController {
         cancelCropBtn.addEventListener('click', () => {
             this.cancelCrop();
         });
+        
+        extractPersonBtn.addEventListener('click', () => {
+            this.extractPerson();
+        });
+        
+        // Opacity control
+        opacityInput.addEventListener('input', (e) => {
+            const opacity = parseInt(e.target.value) / 100;
+            opacityValue.textContent = e.target.value + '%';
+            this.canvasManager.updateSelectedElement({ opacity: opacity });
+        });
+        
+        // Brightness control
+        brightnessInput.addEventListener('input', (e) => {
+            const brightness = parseInt(e.target.value);
+            brightnessValue.textContent = brightness + '%';
+            this.canvasManager.updateSelectedElement({ brightness: brightness });
+        });
+        
+        // Contrast control
+        contrastInput.addEventListener('input', (e) => {
+            const contrast = parseInt(e.target.value);
+            contrastValue.textContent = contrast + '%';
+            this.canvasManager.updateSelectedElement({ contrast: contrast });
+        });
+        
+        // Saturation control
+        saturationInput.addEventListener('input', (e) => {
+            const saturation = parseInt(e.target.value);
+            saturationValue.textContent = saturation + '%';
+            this.canvasManager.updateSelectedElement({ saturation: saturation });
+        });
+        
+        // Rotation control
+        rotationInput.addEventListener('input', (e) => {
+            const rotation = parseInt(e.target.value);
+            rotationValue.textContent = rotation + '°';
+            this.canvasManager.updateSelectedElement({ rotation: rotation });
+        });
     }
     
     showImageControls() {
@@ -256,6 +309,32 @@ export class UIController {
     hideImageControls() {
         const imageControls = document.getElementById('image-controls');
         imageControls.style.display = 'none';
+    }
+    
+    updateImageControls() {
+        const selectedElement = this.canvasManager.selectedElement;
+        if (selectedElement && selectedElement.text === undefined) {
+            // Update opacity control
+            const opacityValue = Math.round(selectedElement.opacity * 100);
+            document.getElementById('image-opacity').value = opacityValue;
+            document.getElementById('image-opacity-value').textContent = opacityValue + '%';
+            
+            // Update brightness control
+            document.getElementById('image-brightness').value = selectedElement.brightness;
+            document.getElementById('image-brightness-value').textContent = selectedElement.brightness + '%';
+            
+            // Update contrast control
+            document.getElementById('image-contrast').value = selectedElement.contrast;
+            document.getElementById('image-contrast-value').textContent = selectedElement.contrast + '%';
+            
+            // Update saturation control
+            document.getElementById('image-saturation').value = selectedElement.saturation;
+            document.getElementById('image-saturation-value').textContent = selectedElement.saturation + '%';
+            
+            // Update rotation control
+            document.getElementById('image-rotation').value = selectedElement.rotation;
+            document.getElementById('image-rotation-value').textContent = selectedElement.rotation + '°';
+        }
     }
     
     startCropping() {
@@ -307,6 +386,122 @@ export class UIController {
         cropControls.style.display = 'none';
         
         this.canvasManager.redrawCanvas();
+    }
+    
+    async extractPerson() {
+        const selectedElement = this.canvasManager.selectedElement;
+        if (!selectedElement || selectedElement.text !== undefined) return;
+        
+        try {
+            // Check if BodyPix model is loaded
+            if (!window.bodyPixModel) {
+                const statusElement = document.getElementById('model-status');
+                const statusText = statusElement ? statusElement.textContent : '';
+                
+                if (statusText.includes('Loading') || statusText.includes('Initializing')) {
+                    alert('AI model is still loading. Please wait and try again in a few moments.');
+                } else if (statusText.includes('failed') || statusText.includes('error')) {
+                    alert('AI model failed to load. Please refresh the page to try again.');
+                } else {
+                    alert('Person segmentation model not loaded yet. Please wait and try again.');
+                }
+                return;
+            }
+            
+            // Show loading message
+            const button = document.getElementById('extract-person');
+            const originalText = button.textContent;
+            button.textContent = 'Processing...';
+            button.disabled = true;
+            
+            // Perform person segmentation
+            const maskedImage = await this.segmentPerson(selectedElement.image);
+            
+            if (maskedImage) {
+                // Create new image element with the masked person
+                const personElementX = selectedElement.x + 50;
+                const personElementY = selectedElement.y + 50;
+                this.canvasManager.addImageElement(maskedImage, personElementX, personElementY);
+                
+                alert('Person extracted successfully with transparent background!');
+            } else {
+                alert('No person detected in the image.');
+            }
+            
+            // Restore button
+            button.textContent = originalText;
+            button.disabled = false;
+            
+        } catch (error) {
+            console.error('Person extraction error:', error);
+            alert('Person extraction failed. Please try again.');
+            
+            // Restore button
+            const button = document.getElementById('extract-person');
+            button.textContent = 'Extract Person';
+            button.disabled = false;
+        }
+    }
+    
+    async segmentPerson(image) {
+        // Create a canvas to analyze the image
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        ctx.drawImage(image, 0, 0);
+        
+        // Perform person segmentation
+        const segmentation = await window.bodyPixModel.segmentPerson(canvas, {
+            flipHorizontal: false,
+            internalResolution: 'medium',
+            segmentationThreshold: 0.7
+        });
+        
+        // Create a new canvas for the masked result
+        const resultCanvas = document.createElement('canvas');
+        const resultCtx = resultCanvas.getContext('2d');
+        resultCanvas.width = image.width;
+        resultCanvas.height = image.height;
+        
+        // Get image data
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const resultImageData = resultCtx.createImageData(canvas.width, canvas.height);
+        
+        // Apply the mask - only keep pixels where person is detected
+        for (let i = 0; i < segmentation.data.length; i++) {
+            const pixelIndex = i * 4;
+            
+            if (segmentation.data[i] === 1) { // Person pixel
+                // Keep the original pixel
+                resultImageData.data[pixelIndex] = imageData.data[pixelIndex];     // R
+                resultImageData.data[pixelIndex + 1] = imageData.data[pixelIndex + 1]; // G
+                resultImageData.data[pixelIndex + 2] = imageData.data[pixelIndex + 2]; // B
+                resultImageData.data[pixelIndex + 3] = imageData.data[pixelIndex + 3]; // A
+            } else { // Background pixel
+                // Make transparent
+                resultImageData.data[pixelIndex] = 0;     // R
+                resultImageData.data[pixelIndex + 1] = 0; // G
+                resultImageData.data[pixelIndex + 2] = 0; // B
+                resultImageData.data[pixelIndex + 3] = 0; // A (transparent)
+            }
+        }
+        
+        // Put the result on the canvas
+        resultCtx.putImageData(resultImageData, 0, 0);
+        
+        // Check if any person pixels were found
+        const hasPersonPixels = segmentation.data.some(pixel => pixel === 1);
+        if (!hasPersonPixels) {
+            return null;
+        }
+        
+        // Convert canvas to image
+        return new Promise((resolve) => {
+            const personImage = new Image();
+            personImage.onload = () => resolve(personImage);
+            personImage.src = resultCanvas.toDataURL('image/png'); // PNG to preserve transparency
+        });
     }
     
     setupKeyboardShortcuts() {
