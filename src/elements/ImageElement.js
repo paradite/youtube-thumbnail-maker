@@ -14,6 +14,13 @@ export class ImageElement {
         // Maintain aspect ratio by default
         this.aspectRatio = this.originalWidth / this.originalHeight;
         this.maintainAspectRatio = true;
+        
+        // Crop properties
+        this.cropX = 0;
+        this.cropY = 0;
+        this.cropWidth = this.originalWidth;
+        this.cropHeight = this.originalHeight;
+        this.cropMode = false;
     }
     
     render(ctx) {
@@ -22,13 +29,28 @@ export class ImageElement {
         if (this.rotation !== 0) {
             ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
             ctx.rotate(this.rotation * Math.PI / 180);
-            ctx.drawImage(this.image, -this.width / 2, -this.height / 2, this.width, this.height);
+            // Draw cropped image
+            ctx.drawImage(
+                this.image,
+                this.cropX, this.cropY, this.cropWidth, this.cropHeight,
+                -this.width / 2, -this.height / 2, this.width, this.height
+            );
         } else {
-            ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+            // Draw cropped image
+            ctx.drawImage(
+                this.image,
+                this.cropX, this.cropY, this.cropWidth, this.cropHeight,
+                this.x, this.y, this.width, this.height
+            );
         }
         
         if (this.selected) {
             this.renderSelection(ctx);
+        }
+        
+        // Render crop overlay if in crop mode
+        if (this.cropMode && this.selected) {
+            this.renderCropOverlay(ctx);
         }
         
         ctx.restore();
@@ -185,5 +207,83 @@ export class ImageElement {
     fitToSize(maxWidth, maxHeight) {
         const scale = Math.min(maxWidth / this.width, maxHeight / this.height);
         this.scale(scale);
+    }
+    
+    // Set crop area
+    setCropArea(x, y, width, height) {
+        this.cropX = Math.max(0, Math.min(x, this.originalWidth - 1));
+        this.cropY = Math.max(0, Math.min(y, this.originalHeight - 1));
+        this.cropWidth = Math.max(1, Math.min(width, this.originalWidth - this.cropX));
+        this.cropHeight = Math.max(1, Math.min(height, this.originalHeight - this.cropY));
+        
+        // Update aspect ratio based on crop
+        this.aspectRatio = this.cropWidth / this.cropHeight;
+        
+        // Adjust display dimensions to maintain aspect ratio
+        if (this.maintainAspectRatio) {
+            this.height = this.width / this.aspectRatio;
+        }
+    }
+    
+    // Reset crop to show full image
+    resetCrop() {
+        this.cropX = 0;
+        this.cropY = 0;
+        this.cropWidth = this.originalWidth;
+        this.cropHeight = this.originalHeight;
+        this.aspectRatio = this.originalWidth / this.originalHeight;
+    }
+    
+    // Render crop overlay to show the crop area on original image
+    renderCropOverlay(ctx) {
+        if (this.rotation !== 0) return; // Skip crop overlay for rotated images for simplicity
+        
+        // Calculate the scale between displayed size and original size
+        const scaleX = this.width / this.cropWidth;
+        const scaleY = this.height / this.cropHeight;
+        
+        // Draw semi-transparent overlay for the entire original image bounds
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#000000';
+        
+        // Calculate original image bounds in display coordinates
+        const originalDisplayWidth = this.originalWidth * scaleX;
+        const originalDisplayHeight = this.originalHeight * scaleY;
+        const cropDisplayX = this.cropX * scaleX;
+        const cropDisplayY = this.cropY * scaleY;
+        
+        // Adjust position to show where the full original image would be
+        const offsetX = this.x - cropDisplayX;
+        const offsetY = this.y - cropDisplayY;
+        
+        // Fill areas outside the crop
+        // Top
+        if (cropDisplayY > 0) {
+            ctx.fillRect(offsetX, offsetY, originalDisplayWidth, cropDisplayY);
+        }
+        // Bottom
+        if (cropDisplayY + this.height < originalDisplayHeight) {
+            ctx.fillRect(offsetX, this.y + this.height, originalDisplayWidth, originalDisplayHeight - (cropDisplayY + this.height));
+        }
+        // Left
+        if (cropDisplayX > 0) {
+            ctx.fillRect(offsetX, this.y, cropDisplayX, this.height);
+        }
+        // Right
+        if (cropDisplayX + this.width < originalDisplayWidth) {
+            ctx.fillRect(this.x + this.width, this.y, originalDisplayWidth - (cropDisplayX + this.width), this.height);
+        }
+        
+        ctx.restore();
+        
+        // Draw crop boundary
+        ctx.save();
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
+        ctx.setLineDash([]);
+        ctx.restore();
     }
 }

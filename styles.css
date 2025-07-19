@@ -205,10 +205,37 @@ header h1 {
     margin-bottom: 0;
 }
 
-.text-controls {
+.text-controls, .image-controls {
     margin-top: 15px;
     padding-top: 15px;
     border-top: 1px solid #eee;
+}
+
+.crop-controls {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.crop-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.crop-inputs input {
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.btn-primary {
+    background: #007bff;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
 }
 
 .control-group {

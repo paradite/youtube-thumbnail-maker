@@ -113,6 +113,26 @@
                         <h3>Image</h3>
                         <input type="file" id="image-upload" accept="image/*" style="display: none;">
                         <button id="add-image" class="btn">Add Image</button>
+                        
+                        <div id="image-controls" class="image-controls" style="display: none;">
+                            <button id="crop-image" class="btn">Crop Image</button>
+                            
+                            <div id="crop-controls" class="crop-controls" style="display: none;">
+                                <div class="control-group">
+                                    <label>Crop Area:</label>
+                                    <div class="crop-inputs">
+                                        <input type="number" id="crop-x" placeholder="X" min="0">
+                                        <input type="number" id="crop-y" placeholder="Y" min="0">
+                                        <input type="number" id="crop-width" placeholder="Width" min="1">
+                                        <input type="number" id="crop-height" placeholder="Height" min="1">
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <button id="apply-crop" class="btn btn-primary">Apply Crop</button>
+                                    <button id="cancel-crop" class="btn">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="tool-section">

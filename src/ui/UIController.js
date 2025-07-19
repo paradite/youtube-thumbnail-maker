@@ -106,6 +106,7 @@ export class UIController {
         });
         
         this.setupTextControls();
+        this.setupImageControls();
         this.setupKeyboardShortcuts();
     }
     
@@ -177,12 +178,15 @@ export class UIController {
             if (selectedElement.text !== undefined) {
                 this.showTextControls();
                 this.updateTextControls();
+                this.hideImageControls();
             } else {
                 this.hideTextControls();
+                this.showImageControls();
             }
         } else {
             deleteBtn.disabled = true;
             this.hideTextControls();
+            this.hideImageControls();
         }
     }
     
@@ -226,6 +230,85 @@ export class UIController {
         this.updatePatternButtons(this.canvasManager.currentBackgroundPattern);
     }
     
+    setupImageControls() {
+        const cropBtn = document.getElementById('crop-image');
+        const applyCropBtn = document.getElementById('apply-crop');
+        const cancelCropBtn = document.getElementById('cancel-crop');
+        
+        cropBtn.addEventListener('click', () => {
+            this.startCropping();
+        });
+        
+        applyCropBtn.addEventListener('click', () => {
+            this.applyCrop();
+        });
+        
+        cancelCropBtn.addEventListener('click', () => {
+            this.cancelCrop();
+        });
+    }
+    
+    showImageControls() {
+        const imageControls = document.getElementById('image-controls');
+        imageControls.style.display = 'block';
+    }
+    
+    hideImageControls() {
+        const imageControls = document.getElementById('image-controls');
+        imageControls.style.display = 'none';
+    }
+    
+    startCropping() {
+        const selectedElement = this.canvasManager.selectedElement;
+        if (!selectedElement || selectedElement.text !== undefined) return;
+        
+        const cropControls = document.getElementById('crop-controls');
+        cropControls.style.display = 'block';
+        
+        // Initialize crop area with current image dimensions
+        document.getElementById('crop-x').value = 0;
+        document.getElementById('crop-y').value = 0;
+        document.getElementById('crop-width').value = selectedElement.originalWidth;
+        document.getElementById('crop-height').value = selectedElement.originalHeight;
+        
+        // Enable crop mode
+        selectedElement.cropMode = true;
+        this.canvasManager.redrawCanvas();
+    }
+    
+    applyCrop() {
+        const selectedElement = this.canvasManager.selectedElement;
+        if (!selectedElement || selectedElement.text !== undefined) return;
+        
+        const cropX = parseInt(document.getElementById('crop-x').value) || 0;
+        const cropY = parseInt(document.getElementById('crop-y').value) || 0;
+        const cropWidth = parseInt(document.getElementById('crop-width').value) || selectedElement.originalWidth;
+        const cropHeight = parseInt(document.getElementById('crop-height').value) || selectedElement.originalHeight;
+        
+        // Validate crop dimensions
+        if (cropX < 0 || cropY < 0 || cropWidth <= 0 || cropHeight <= 0 ||
+            cropX + cropWidth > selectedElement.originalWidth ||
+            cropY + cropHeight > selectedElement.originalHeight) {
+            alert('Invalid crop dimensions. Please check your values.');
+            return;
+        }
+        
+        selectedElement.setCropArea(cropX, cropY, cropWidth, cropHeight);
+        this.cancelCrop();
+    }
+    
+    cancelCrop() {
+        const selectedElement = this.canvasManager.selectedElement;
+        if (selectedElement) {
+            selectedElement.cropMode = false;
+        }
+        
+        const cropControls = document.getElementById('crop-controls');
+        cropControls.style.display = 'none';
+        
+        this.canvasManager.redrawCanvas();
+    }
+    
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
             // Only handle keyboard shortcuts when not focused on an input
@@ -239,8 +322,15 @@ export class UIController {
                 this.canvasManager.deleteSelectedElement();
             }
             
-            // Escape key to deselect
+            // Escape key to deselect or cancel crop
             if (e.key === 'Escape') {
+                // Cancel crop if in crop mode
+                const selectedElement = this.canvasManager.selectedElement;
+                if (selectedElement && selectedElement.cropMode) {
+                    this.cancelCrop();
+                    return;
+                }
+                
                 this.canvasManager.selectedElement = null;
                 this.canvasManager.elements.forEach(element => {
                     element.selected = false;
