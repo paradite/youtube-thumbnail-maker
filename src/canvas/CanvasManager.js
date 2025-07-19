@@ -367,6 +367,116 @@ export class CanvasManager {
         return this.canvas.toDataURL(format, quality);
     }
     
+    exportProject() {
+        const projectData = {
+            elements: this.elements.map(element => {
+                const serialized = { ...element };
+                delete serialized.selected;
+                
+                if (element.text !== undefined) {
+                    serialized.type = 'text';
+                } else if (element.image) {
+                    serialized.type = 'image';
+                    // Convert image to data URL for export
+                    const canvas = document.createElement('canvas');
+                    canvas.width = element.originalWidth;
+                    canvas.height = element.originalHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(element.image, 0, 0);
+                    serialized.imageData = canvas.toDataURL();
+                    delete serialized.image; // Remove the actual image object
+                }
+                
+                return serialized;
+            }),
+            backgroundColor: this.currentBackgroundColor,
+            backgroundPattern: this.currentBackgroundPattern,
+            version: '1.0',
+            timestamp: Date.now(),
+            metadata: {
+                appName: 'YouTube Thumbnail Maker',
+                canvasWidth: this.canvas.width,
+                canvasHeight: this.canvas.height
+            }
+        };
+        
+        return JSON.stringify(projectData, null, 2);
+    }
+    
+    async importProject(jsonData) {
+        try {
+            const projectData = JSON.parse(jsonData);
+            
+            // Validate project data structure
+            if (!projectData.version || !projectData.elements || !Array.isArray(projectData.elements)) {
+                throw new Error('Invalid project file format');
+            }
+            
+            // Clear current elements
+            this.elements = [];
+            this.selectedElement = null;
+            
+            // Load elements
+            const loadPromises = projectData.elements.map(elementData => {
+                return new Promise((resolve) => {
+                    if (elementData.type === 'text') {
+                        const { type, ...elementProps } = elementData;
+                        const textElement = Object.assign(new TextElement(0, 0, ''), elementProps);
+                        if (elementProps.rotation === undefined) {
+                            textElement.rotation = 0;
+                        }
+                        this.elements.push(textElement);
+                        resolve();
+                    } else if (elementData.type === 'image' && elementData.imageData) {
+                        const img = new Image();
+                        img.onload = () => {
+                            const { type, imageData, ...elementProps } = elementData;
+                            const imageElement = Object.assign(new ImageElement(0, 0, img), elementProps);
+                            imageElement.image = img;
+                            if (elementProps.rotation === undefined) {
+                                imageElement.rotation = 0;
+                            }
+                            this.elements.push(imageElement);
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            console.error('Failed to load image from project');
+                            resolve();
+                        };
+                        img.src = elementData.imageData;
+                    } else {
+                        resolve();
+                    }
+                });
+            });
+            
+            await Promise.all(loadPromises);
+            
+            // Restore background settings
+            if (projectData.backgroundColor) {
+                this.currentBackgroundColor = projectData.backgroundColor;
+            }
+            
+            if (projectData.backgroundPattern) {
+                this.currentBackgroundPattern = projectData.backgroundPattern;
+            }
+            
+            // Redraw canvas and update UI
+            this.redrawCanvas();
+            this.updateUIAfterLoad();
+            
+            // Save to localStorage after import
+            this.saveToLocalStorage();
+            
+            console.log('Project imported successfully');
+            return true;
+            
+        } catch (error) {
+            console.error('Failed to import project:', error);
+            throw new Error('Failed to import project: ' + error.message);
+        }
+    }
+    
     saveToLocalStorage() {
         const projectData = {
             elements: this.elements.map(element => {

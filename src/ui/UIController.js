@@ -100,6 +100,24 @@ export class UIController {
             this.downloadImage('png');
         });
         
+        const exportProjectBtn = document.getElementById('export-project');
+        exportProjectBtn.addEventListener('click', () => {
+            this.downloadProject();
+        });
+        
+        const importProjectBtn = document.getElementById('import-project');
+        const importProjectInput = document.getElementById('import-project-input');
+        
+        importProjectBtn.addEventListener('click', () => {
+            importProjectInput.click();
+        });
+        
+        importProjectInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                this.loadProject(e.target.files[0]);
+            }
+        });
+        
         const deleteBtn = document.getElementById('delete-element');
         deleteBtn.addEventListener('click', () => {
             this.canvasManager.deleteSelectedElement();
@@ -202,6 +220,60 @@ export class UIController {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+    
+    downloadProject() {
+        try {
+            const projectJson = this.canvasManager.exportProject();
+            const blob = new Blob([projectJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.download = `youtube-thumbnail-project-${Date.now()}.json`;
+            link.href = url;
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Failed to export project:', error);
+            alert('Failed to export project. Please try again.');
+        }
+    }
+    
+    async loadProject(file) {
+        // Validate file type
+        if (!file.type.includes('json') && !file.name.endsWith('.json')) {
+            alert('Please select a valid JSON project file.');
+            return;
+        }
+        
+        // Validate file size (max 50MB to be safe)
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        if (file.size > maxSize) {
+            alert('Project file is too large. Please select a file smaller than 50MB.');
+            return;
+        }
+        
+        try {
+            const fileText = await file.text();
+            await this.canvasManager.importProject(fileText);
+            alert('Project imported successfully!');
+            
+            // Clear the file input so the same file can be selected again
+            const importInput = document.getElementById('import-project-input');
+            importInput.value = '';
+            
+        } catch (error) {
+            console.error('Failed to import project:', error);
+            alert('Failed to import project: ' + error.message);
+            
+            // Clear the file input
+            const importInput = document.getElementById('import-project-input');
+            importInput.value = '';
+        }
     }
     
     updateColorPalette(selectedColor) {
