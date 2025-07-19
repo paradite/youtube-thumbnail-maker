@@ -188,6 +188,54 @@ header h1 {
     margin-bottom: 0;
 }
 
+.text-controls {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.control-group {
+    margin-bottom: 15px;
+}
+
+.control-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.control-group input[type="text"],
+.control-group select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: white;
+}
+
+.control-group input[type="range"] {
+    width: calc(100% - 50px);
+    margin-right: 10px;
+}
+
+.control-group input[type="color"] {
+    width: 40px;
+    height: 35px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+}
+
+#text-size-value {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+}
+
 @media (max-width: 768px) {
     .editor-area {
         flex-direction: column;

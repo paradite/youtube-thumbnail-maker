@@ -58,6 +58,55 @@
                     <div class="tool-section">
                         <h3>Text</h3>
                         <button id="add-text" class="btn">Add Text</button>
+                        
+                        <div id="text-controls" class="text-controls" style="display: none;">
+                            <div class="control-group">
+                                <label for="text-content">Text Content:</label>
+                                <input type="text" id="text-content" placeholder="Enter your text" value="Sample Text">
+                            </div>
+                            
+                            <div class="control-group">
+                                <label for="text-font">Font:</label>
+                                <select id="text-font">
+                                    <option value="Arial">Arial</option>
+                                    <option value="Helvetica">Helvetica</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="Georgia">Georgia</option>
+                                    <option value="Verdana">Verdana</option>
+                                    <option value="Courier New">Courier New</option>
+                                    <option value="Impact">Impact</option>
+                                    <option value="Comic Sans MS">Comic Sans MS</option>
+                                </select>
+                            </div>
+                            
+                            <div class="control-group">
+                                <label for="text-size">Size:</label>
+                                <input type="range" id="text-size" min="12" max="120" value="48">
+                                <span id="text-size-value">48px</span>
+                            </div>
+                            
+                            <div class="control-group">
+                                <label for="text-color">Color:</label>
+                                <input type="color" id="text-color" value="#000000">
+                            </div>
+                            
+                            <div class="control-group">
+                                <label for="text-weight">Weight:</label>
+                                <select id="text-weight">
+                                    <option value="normal">Normal</option>
+                                    <option value="bold">Bold</option>
+                                </select>
+                            </div>
+                            
+                            <div class="control-group">
+                                <label for="text-align">Alignment:</label>
+                                <select id="text-align">
+                                    <option value="left">Left</option>
+                                    <option value="center">Center</option>
+                                    <option value="right">Right</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="tool-section">

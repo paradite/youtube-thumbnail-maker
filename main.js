@@ -1,3 +1,82 @@
+class TextElement {
+    constructor(x, y, text, options = {}) {
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.font = options.font || 'Arial';
+        this.size = options.size || 48;
+        this.color = options.color || '#000000';
+        this.weight = options.weight || 'normal';
+        this.align = options.align || 'left';
+        this.selected = false;
+        this.id = Date.now() + Math.random();
+    }
+    
+    render(ctx) {
+        ctx.save();
+        ctx.font = `${this.weight} ${this.size}px ${this.font}`;
+        ctx.fillStyle = this.color;
+        ctx.textAlign = this.align;
+        ctx.textBaseline = 'top';
+        
+        ctx.fillText(this.text, this.x, this.y);
+        
+        if (this.selected) {
+            this.renderSelection(ctx);
+        }
+        
+        ctx.restore();
+    }
+    
+    renderSelection(ctx) {
+        const metrics = ctx.measureText(this.text);
+        const width = metrics.width;
+        const height = this.size;
+        
+        let startX = this.x;
+        if (this.align === 'center') {
+            startX = this.x - width / 2;
+        } else if (this.align === 'right') {
+            startX = this.x - width;
+        }
+        
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(startX - 5, this.y - 5, width + 10, height + 10);
+        ctx.setLineDash([]);
+    }
+    
+    isPointInside(x, y, ctx) {
+        ctx.save();
+        ctx.font = `${this.weight} ${this.size}px ${this.font}`;
+        const metrics = ctx.measureText(this.text);
+        const width = metrics.width;
+        const height = this.size;
+        
+        let startX = this.x;
+        if (this.align === 'center') {
+            startX = this.x - width / 2;
+        } else if (this.align === 'right') {
+            startX = this.x - width;
+        }
+        
+        ctx.restore();
+        
+        return x >= startX && x <= startX + width && 
+               y >= this.y && y <= this.y + height;
+    }
+    
+    update(options) {
+        if (options.text !== undefined) this.text = options.text;
+        if (options.font !== undefined) this.font = options.font;
+        if (options.size !== undefined) this.size = options.size;
+        if (options.color !== undefined) this.color = options.color;
+        if (options.weight !== undefined) this.weight = options.weight;
+        if (options.align !== undefined) this.align = options.align;
+    }
+}
+
 class CanvasManager {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -6,6 +85,9 @@ class CanvasManager {
         this.selectedElement = null;
         this.currentBackgroundColor = '#ffffff';
         this.currentBackgroundPattern = 'solid';
+        this.isDragging = false;
+        this.dragOffset = { x: 0, y: 0 };
+        this.onSelectionChange = null;
         
         this.init();
     }
@@ -35,21 +117,48 @@ class CanvasManager {
         const x = (e.clientX - rect.left) * (this.canvas.width / rect.width);
         const y = (e.clientY - rect.top) * (this.canvas.height / rect.height);
         
-        console.log('Mouse down at:', x, y);
+        this.selectedElement = null;
+        
+        for (let i = this.elements.length - 1; i >= 0; i--) {
+            const element = this.elements[i];
+            if (element.isPointInside && element.isPointInside(x, y, this.ctx)) {
+                this.selectedElement = element;
+                element.selected = true;
+                this.isDragging = true;
+                this.dragOffset.x = x - element.x;
+                this.dragOffset.y = y - element.y;
+                break;
+            }
+        }
+        
+        this.elements.forEach(element => {
+            if (element !== this.selectedElement) {
+                element.selected = false;
+            }
+        });
+        
+        if (this.onSelectionChange) {
+            this.onSelectionChange(this.selectedElement);
+        }
+        
+        this.redrawCanvas();
     }
     
     handleMouseMove(e) {
-        if (this.selectedElement) {
+        if (this.isDragging && this.selectedElement) {
             const rect = this.canvas.getBoundingClientRect();
             const x = (e.clientX - rect.left) * (this.canvas.width / rect.width);
             const y = (e.clientY - rect.top) * (this.canvas.height / rect.height);
             
-            console.log('Mouse move at:', x, y);
+            this.selectedElement.x = x - this.dragOffset.x;
+            this.selectedElement.y = y - this.dragOffset.y;
+            
+            this.redrawCanvas();
         }
     }
     
     handleMouseUp(e) {
-        this.selectedElement = null;
+        this.isDragging = false;
     }
     
     handleTouchStart(e) {
@@ -168,6 +277,38 @@ class CanvasManager {
         });
     }
     
+    redrawCanvas() {
+        this.renderBackground();
+        this.redraw();
+    }
+    
+    addTextElement(text = 'Sample Text', x = 100, y = 100) {
+        const textElement = new TextElement(x, y, text);
+        this.elements.push(textElement);
+        this.selectedElement = textElement;
+        textElement.selected = true;
+        
+        this.elements.forEach(element => {
+            if (element !== textElement) {
+                element.selected = false;
+            }
+        });
+        
+        if (this.onSelectionChange) {
+            this.onSelectionChange(textElement);
+        }
+        
+        this.redrawCanvas();
+        return textElement;
+    }
+    
+    updateSelectedElement(options) {
+        if (this.selectedElement && this.selectedElement.update) {
+            this.selectedElement.update(options);
+            this.redrawCanvas();
+        }
+    }
+    
     exportAsImage(format = 'image/jpeg', quality = 0.9) {
         return this.canvas.toDataURL(format, quality);
     }
@@ -176,6 +317,7 @@ class CanvasManager {
 class UIController {
     constructor(canvasManager) {
         this.canvasManager = canvasManager;
+        this.canvasManager.onSelectionChange = this.handleSelectionChange.bind(this);
         this.setupEventListeners();
     }
     
@@ -209,7 +351,7 @@ class UIController {
         
         const addTextBtn = document.getElementById('add-text');
         addTextBtn.addEventListener('click', () => {
-            console.log('Add text clicked');
+            this.canvasManager.addTextElement();
         });
         
         const addImageBtn = document.getElementById('add-image');
@@ -234,6 +376,76 @@ class UIController {
         exportPngBtn.addEventListener('click', () => {
             this.downloadImage('png');
         });
+        
+        this.setupTextControls();
+    }
+    
+    setupTextControls() {
+        const textContent = document.getElementById('text-content');
+        const textFont = document.getElementById('text-font');
+        const textSize = document.getElementById('text-size');
+        const textSizeValue = document.getElementById('text-size-value');
+        const textColor = document.getElementById('text-color');
+        const textWeight = document.getElementById('text-weight');
+        const textAlign = document.getElementById('text-align');
+        
+        textContent.addEventListener('input', (e) => {
+            this.canvasManager.updateSelectedElement({ text: e.target.value });
+        });
+        
+        textFont.addEventListener('change', (e) => {
+            this.canvasManager.updateSelectedElement({ font: e.target.value });
+        });
+        
+        textSize.addEventListener('input', (e) => {
+            const size = parseInt(e.target.value);
+            textSizeValue.textContent = size + 'px';
+            this.canvasManager.updateSelectedElement({ size: size });
+        });
+        
+        textColor.addEventListener('change', (e) => {
+            this.canvasManager.updateSelectedElement({ color: e.target.value });
+        });
+        
+        textWeight.addEventListener('change', (e) => {
+            this.canvasManager.updateSelectedElement({ weight: e.target.value });
+        });
+        
+        textAlign.addEventListener('change', (e) => {
+            this.canvasManager.updateSelectedElement({ align: e.target.value });
+        });
+    }
+    
+    showTextControls() {
+        const textControls = document.getElementById('text-controls');
+        textControls.style.display = 'block';
+    }
+    
+    hideTextControls() {
+        const textControls = document.getElementById('text-controls');
+        textControls.style.display = 'none';
+    }
+    
+    updateTextControls() {
+        const selectedElement = this.canvasManager.selectedElement;
+        if (selectedElement && selectedElement.text !== undefined) {
+            document.getElementById('text-content').value = selectedElement.text;
+            document.getElementById('text-font').value = selectedElement.font;
+            document.getElementById('text-size').value = selectedElement.size;
+            document.getElementById('text-size-value').textContent = selectedElement.size + 'px';
+            document.getElementById('text-color').value = selectedElement.color;
+            document.getElementById('text-weight').value = selectedElement.weight;
+            document.getElementById('text-align').value = selectedElement.align;
+        }
+    }
+    
+    handleSelectionChange(selectedElement) {
+        if (selectedElement && selectedElement.text !== undefined) {
+            this.showTextControls();
+            this.updateTextControls();
+        } else {
+            this.hideTextControls();
+        }
     }
     
     downloadImage(format) {
