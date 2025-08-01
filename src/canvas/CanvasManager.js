@@ -63,7 +63,7 @@ export class CanvasManager {
             const element = this.elements[i];
             
             if (element.selected && element.isPointInResizeHandle) {
-                const handleType = element.isPointInResizeHandle(x, y, this.ctx);
+                const handleType = element.isPointInResizeHandle(x, y);
                 if (handleType) {
                     this.selectedElement = element;
                     if (handleType === 'rotate') {
@@ -191,7 +191,7 @@ export class CanvasManager {
             const element = this.elements[i];
             
             if (element.selected && element.isPointInResizeHandle) {
-                const handleType = element.isPointInResizeHandle(x, y, this.ctx);
+                const handleType = element.isPointInResizeHandle(x, y);
                 if (handleType) {
                     if (handleType === 'rotate') {
                         cursor = 'grab';

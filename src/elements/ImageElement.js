@@ -117,14 +117,15 @@ export class ImageElement {
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 1;
         
-        const handles = [
+        // Local handle positions (for drawing in transformed context)
+        const localHandles = [
             { x: x - handleSize/2, y: y - handleSize/2, type: 'nw' },
             { x: x + width - handleSize/2, y: y - handleSize/2, type: 'ne' },
             { x: x - handleSize/2, y: y + height - handleSize/2, type: 'sw' },
             { x: x + width - handleSize/2, y: y + height - handleSize/2, type: 'se' }
         ];
         
-        handles.forEach(handle => {
+        localHandles.forEach(handle => {
             ctx.fillRect(handle.x, handle.y, handleSize, handleSize);
             ctx.strokeRect(handle.x, handle.y, handleSize, handleSize);
         });
@@ -144,9 +145,35 @@ export class ImageElement {
         ctx.lineTo(x + width / 2, y - 15);
         ctx.stroke();
         
-        handles.push({ x: rotateHandleX, y: rotateHandleY, type: 'rotate' });
+        localHandles.push({ x: rotateHandleX, y: rotateHandleY, type: 'rotate' });
         
-        this.resizeHandles = handles;
+        // Store handles in global coordinates for hit testing
+        if (this.rotation !== 0) {
+            // For rotated elements, transform the same local handle positions that are being drawn
+            // to global coordinates for hit testing
+            const centerX = this.x + this.width / 2;
+            const centerY = this.y + this.height / 2;
+            
+            // Transform the same local handle coordinates that are being drawn to global coordinates
+            this.resizeHandles = localHandles.map(handle => {
+                // The local handles are positioned in the transformed coordinate system
+                // We need to transform these to global coordinates
+                const localCenterX = handle.x + handleSize/2;  // Center of the handle in local coords
+                const localCenterY = handle.y + handleSize/2;
+                
+                // Transform from local transformed space to global space
+                const globalPoint = this.rotatePoint(localCenterX, localCenterY, 0, 0, this.rotation);
+                
+                return {
+                    x: centerX + globalPoint.x - handleSize/2,
+                    y: centerY + globalPoint.y - handleSize/2,
+                    type: handle.type
+                };
+            });
+        } else {
+            // For non-rotated elements, handles are already in global coordinates
+            this.resizeHandles = localHandles;
+        }
     }
     
     isPointInside(x, y) {
@@ -181,23 +208,11 @@ export class ImageElement {
     isPointInResizeHandle(x, y) {
         if (!this.selected || !this.resizeHandles) return null;
         
-        if (this.rotation !== 0) {
-            const centerX = this.x + this.width / 2;
-            const centerY = this.y + this.height / 2;
-            const rotatedPoint = this.rotatePoint(x, y, centerX, centerY, -this.rotation);
-            
-            for (let handle of this.resizeHandles) {
-                if (rotatedPoint.x >= handle.x && rotatedPoint.x <= handle.x + 8 &&
-                    rotatedPoint.y >= handle.y && rotatedPoint.y <= handle.y + 8) {
-                    return handle.type;
-                }
-            }
-        } else {
-            for (let handle of this.resizeHandles) {
-                if (x >= handle.x && x <= handle.x + 8 &&
-                    y >= handle.y && y <= handle.y + 8) {
-                    return handle.type;
-                }
+        // For both rotated and non-rotated elements, handles are now stored in global coordinates
+        for (let handle of this.resizeHandles) {
+            if (x >= handle.x && x <= handle.x + 8 &&
+                y >= handle.y && y <= handle.y + 8) {
+                return handle.type;
             }
         }
         
