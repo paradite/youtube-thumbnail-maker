@@ -137,6 +137,12 @@ export class CanvasManager {
             while (newRotation >= 360) newRotation -= 360;
             
             this.selectedElement.rotation = newRotation;
+            
+            // Update UI controls when rotation changes
+            if (this.onSelectionChange) {
+                this.onSelectionChange(this.selectedElement);
+            }
+            
             this.redrawCanvas();
         } else if (this.isResizing && this.selectedElement) {
             this.canvas.style.cursor = 'nw-resize';
@@ -338,7 +344,8 @@ export class CanvasManager {
             this.redrawCanvas();
             this.saveToLocalStorage();
             
-            if (this.onSelectionChange && options.size !== undefined) {
+            // Update UI controls when specific properties change
+            if (this.onSelectionChange && (options.size !== undefined || options.rotation !== undefined)) {
                 this.onSelectionChange(this.selectedElement);
             }
         }

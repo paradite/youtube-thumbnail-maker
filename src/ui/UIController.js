@@ -136,6 +136,7 @@ export class UIController {
         const textColor = document.getElementById('text-color');
         const textWeight = document.getElementById('text-weight');
         const textAlign = document.getElementById('text-align');
+        const textRotation = document.getElementById('text-rotation');
         
         textContent.addEventListener('input', (e) => {
             this.canvasManager.updateSelectedElement({ text: e.target.value });
@@ -162,6 +163,16 @@ export class UIController {
         textAlign.addEventListener('change', (e) => {
             this.canvasManager.updateSelectedElement({ align: e.target.value });
         });
+        
+        textRotation.addEventListener('input', (e) => {
+            let rotation = parseInt(e.target.value) || 0;
+            
+            // Normalize rotation to 0-360 range
+            while (rotation < 0) rotation += 360;
+            while (rotation >= 360) rotation -= 360;
+            
+            this.canvasManager.updateSelectedElement({ rotation: rotation });
+        });
     }
     
     showTextControls() {
@@ -184,6 +195,7 @@ export class UIController {
             document.getElementById('text-color').value = selectedElement.color;
             document.getElementById('text-weight').value = selectedElement.weight;
             document.getElementById('text-align').value = selectedElement.align;
+            document.getElementById('text-rotation').value = Math.round(selectedElement.rotation) || 0;
         }
     }
     
@@ -319,7 +331,6 @@ export class UIController {
         const saturationInput = document.getElementById('image-saturation');
         const saturationValue = document.getElementById('image-saturation-value');
         const rotationInput = document.getElementById('image-rotation');
-        const rotationValue = document.getElementById('image-rotation-value');
         
         cropBtn.addEventListener('click', () => {
             this.startCropping();
@@ -367,8 +378,12 @@ export class UIController {
         
         // Rotation control
         rotationInput.addEventListener('input', (e) => {
-            const rotation = parseInt(e.target.value);
-            rotationValue.textContent = rotation + '°';
+            let rotation = parseInt(e.target.value) || 0;
+            
+            // Normalize rotation to 0-360 range
+            while (rotation < 0) rotation += 360;
+            while (rotation >= 360) rotation -= 360;
+            
             this.canvasManager.updateSelectedElement({ rotation: rotation });
         });
     }
@@ -404,8 +419,7 @@ export class UIController {
             document.getElementById('image-saturation-value').textContent = selectedElement.saturation + '%';
             
             // Update rotation control
-            document.getElementById('image-rotation').value = selectedElement.rotation;
-            document.getElementById('image-rotation-value').textContent = selectedElement.rotation + '°';
+            document.getElementById('image-rotation').value = Math.round(selectedElement.rotation) || 0;
         }
     }
     

@@ -21,9 +21,28 @@ export class TextElement {
         ctx.textBaseline = 'top';
         
         if (this.rotation !== 0) {
-            ctx.translate(this.x, this.y + this.size / 2);
+            // Calculate the center point for rotation based on text alignment
+            const metrics = ctx.measureText(this.text);
+            const width = metrics.width;
+            
+            let centerX = this.x;
+            if (this.align === 'center') {
+                centerX = this.x;
+            } else if (this.align === 'right') {
+                centerX = this.x - width / 2;
+            } else { // left
+                centerX = this.x + width / 2;
+            }
+            
+            const centerY = this.y + this.size / 2;
+            
+            ctx.translate(centerX, centerY);
             ctx.rotate(this.rotation * Math.PI / 180);
-            ctx.fillText(this.text, 0, -this.size / 2);
+            
+            // Reset text alignment to center for rotated text
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.text, 0, 0);
         } else {
             ctx.fillText(this.text, this.x, this.y);
         }
@@ -50,7 +69,19 @@ export class TextElement {
         ctx.save();
         
         if (this.rotation !== 0) {
-            ctx.translate(this.x, this.y + this.size / 2);
+            // Use the same center calculation as in render method
+            let centerX = this.x;
+            if (this.align === 'center') {
+                centerX = this.x;
+            } else if (this.align === 'right') {
+                centerX = this.x - width / 2;
+            } else { // left
+                centerX = this.x + width / 2;
+            }
+            
+            const centerY = this.y + this.size / 2;
+            
+            ctx.translate(centerX, centerY);
             ctx.rotate(this.rotation * Math.PI / 180);
             
             ctx.strokeStyle = '#ff0000';
