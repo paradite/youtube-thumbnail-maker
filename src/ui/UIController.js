@@ -132,7 +132,6 @@ export class UIController {
         const textContent = document.getElementById('text-content');
         const textFont = document.getElementById('text-font');
         const textSize = document.getElementById('text-size');
-        const textSizeValue = document.getElementById('text-size-value');
         const textColor = document.getElementById('text-color');
         const textWeight = document.getElementById('text-weight');
         const textAlign = document.getElementById('text-align');
@@ -148,7 +147,6 @@ export class UIController {
         
         textSize.addEventListener('input', (e) => {
             const size = parseInt(e.target.value);
-            textSizeValue.textContent = size + 'px';
             this.canvasManager.updateSelectedElement({ size: size });
         });
         
@@ -166,11 +164,6 @@ export class UIController {
         
         textRotation.addEventListener('input', (e) => {
             let rotation = parseInt(e.target.value) || 0;
-            
-            // Normalize rotation to 0-360 range
-            while (rotation < 0) rotation += 360;
-            while (rotation >= 360) rotation -= 360;
-            
             this.canvasManager.updateSelectedElement({ rotation: rotation });
         });
     }
@@ -191,7 +184,6 @@ export class UIController {
             document.getElementById('text-content').value = selectedElement.text;
             document.getElementById('text-font').value = selectedElement.font;
             document.getElementById('text-size').value = selectedElement.size;
-            document.getElementById('text-size-value').textContent = selectedElement.size + 'px';
             document.getElementById('text-color').value = selectedElement.color;
             document.getElementById('text-weight').value = selectedElement.weight;
             document.getElementById('text-align').value = selectedElement.align;
@@ -379,11 +371,6 @@ export class UIController {
         // Rotation control
         rotationInput.addEventListener('input', (e) => {
             let rotation = parseInt(e.target.value) || 0;
-            
-            // Normalize rotation to 0-360 range
-            while (rotation < 0) rotation += 360;
-            while (rotation >= 360) rotation -= 360;
-            
             this.canvasManager.updateSelectedElement({ rotation: rotation });
         });
     }

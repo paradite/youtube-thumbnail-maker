@@ -69,6 +69,8 @@ export class ImageElement {
             );
         }
         
+        ctx.restore();
+        
         if (this.selected) {
             this.renderSelection(ctx);
         }
@@ -77,8 +79,6 @@ export class ImageElement {
         if (this.cropMode && this.selected) {
             this.renderCropOverlay(ctx);
         }
-        
-        ctx.restore();
     }
     
     renderSelection(ctx) {
@@ -149,19 +149,17 @@ export class ImageElement {
         
         // Store handles in global coordinates for hit testing
         if (this.rotation !== 0) {
-            // For rotated elements, transform the same local handle positions that are being drawn
-            // to global coordinates for hit testing
+            // For rotated elements, transform the local handle positions to global coordinates
             const centerX = this.x + this.width / 2;
             const centerY = this.y + this.height / 2;
             
-            // Transform the same local handle coordinates that are being drawn to global coordinates
+            // Transform handle positions from local transformed space to global space
             this.resizeHandles = localHandles.map(handle => {
-                // The local handles are positioned in the transformed coordinate system
-                // We need to transform these to global coordinates
-                const localCenterX = handle.x + handleSize/2;  // Center of the handle in local coords
+                // Handle center point in local transformed coordinates
+                const localCenterX = handle.x + handleSize/2;
                 const localCenterY = handle.y + handleSize/2;
                 
-                // Transform from local transformed space to global space
+                // Transform from local space to global space
                 const globalPoint = this.rotatePoint(localCenterX, localCenterY, 0, 0, this.rotation);
                 
                 return {
@@ -171,8 +169,12 @@ export class ImageElement {
                 };
             });
         } else {
-            // For non-rotated elements, handles are already in global coordinates
-            this.resizeHandles = localHandles;
+            // For non-rotated elements, convert local coordinates to global coordinates
+            this.resizeHandles = localHandles.map(handle => ({
+                x: handle.x,
+                y: handle.y,
+                type: handle.type
+            }));
         }
     }
     

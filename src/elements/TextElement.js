@@ -47,17 +47,20 @@ export class TextElement {
             ctx.fillText(this.text, this.x, this.y);
         }
         
+        ctx.restore();
+        
         if (this.selected) {
             this.renderSelection(ctx);
         }
-        
-        ctx.restore();
     }
     
     renderSelection(ctx) {
+        ctx.save();
+        ctx.font = `${this.weight} ${this.size}px ${this.font}`;
         const metrics = ctx.measureText(this.text);
         const width = metrics.width;
         const height = this.size;
+        ctx.restore();
         
         let startX = this.x;
         if (this.align === 'center') {
@@ -141,8 +144,7 @@ export class TextElement {
         
         // Store handles in global coordinates for hit testing
         if (this.rotation !== 0) {
-            // For rotated elements, transform the same local handle positions that are being drawn
-            // to global coordinates for hit testing
+            // For rotated elements, transform the local handle positions to global coordinates
             const metrics = ctx.measureText(this.text);
             const width = metrics.width;
             
@@ -157,14 +159,13 @@ export class TextElement {
             }
             const centerY = this.y + this.size / 2;
             
-            // Transform the same local handle coordinates that are being drawn to global coordinates
+            // Transform handle positions from local transformed space to global space
             this.resizeHandles = localHandles.map(handle => {
-                // The local handles are positioned in the transformed coordinate system
-                // We need to transform these to global coordinates
-                const localCenterX = handle.x + handleSize/2;  // Center of the handle in local coords
+                // Handle center point in local transformed coordinates
+                const localCenterX = handle.x + handleSize/2;
                 const localCenterY = handle.y + handleSize/2;
                 
-                // Transform from local transformed space to global space
+                // Transform from local space to global space
                 const globalPoint = this.rotatePoint(localCenterX, localCenterY, 0, 0, this.rotation);
                 
                 return {
@@ -174,8 +175,12 @@ export class TextElement {
                 };
             });
         } else {
-            // For non-rotated elements, handles are already in global coordinates
-            this.resizeHandles = localHandles;
+            // For non-rotated elements, convert local coordinates to global coordinates
+            this.resizeHandles = localHandles.map(handle => ({
+                x: handle.x,
+                y: handle.y,
+                type: handle.type
+            }));
         }
     }
     

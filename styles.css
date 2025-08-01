@@ -129,6 +129,16 @@ header h1 {
     height: 35px;
 }
 
+.canvas-controls .control-group input[type="number"] {
+    width: 80px;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: white;
+    text-align: center;
+}
+
 .canvas-controls .btn {
     width: auto;
     margin-bottom: 0;
