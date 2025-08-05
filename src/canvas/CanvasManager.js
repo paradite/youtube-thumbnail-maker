@@ -386,6 +386,52 @@ export class CanvasManager {
     return false;
   }
 
+  duplicateSelectedTextElement() {
+    if (this.selectedElement && this.selectedElement.text !== undefined) {
+      // Create a deep clone of the selected text element
+      const originalElement = this.selectedElement;
+
+      // Calculate offset position (place new text to the right of current text)
+      const offsetX = 100; // Horizontal offset
+      const offsetY = 20; // Slight vertical offset
+
+      // Create new text element with all the same properties
+      const duplicatedElement = new TextElement(
+        originalElement.x + offsetX,
+        originalElement.y + offsetY,
+        originalElement.text,
+        {
+          font: originalElement.font,
+          size: originalElement.size,
+          color: originalElement.color,
+          weight: originalElement.weight,
+          align: originalElement.align,
+          rotation: originalElement.rotation,
+        }
+      );
+
+      // Add the duplicated element to the canvas
+      this.elements.push(duplicatedElement);
+
+      // Deselect the original element
+      originalElement.selected = false;
+
+      // Select the new duplicated element
+      this.selectedElement = duplicatedElement;
+      duplicatedElement.selected = true;
+
+      // Trigger selection change callback to update UI controls
+      if (this.onSelectionChange) {
+        this.onSelectionChange(duplicatedElement);
+      }
+
+      this.redrawCanvas();
+      this.saveToLocalStorage();
+      return duplicatedElement;
+    }
+    return null;
+  }
+
   cycleToNextElement() {
     if (this.elements.length === 0) {
       return false;

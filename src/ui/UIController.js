@@ -189,6 +189,11 @@ export class UIController {
       let rotation = parseInt(e.target.value) || 0;
       this.canvasManager.updateSelectedElement({ rotation: rotation });
     });
+
+    const duplicateTextBtn = document.getElementById('duplicate-text');
+    duplicateTextBtn.addEventListener('click', () => {
+      this.canvasManager.duplicateSelectedTextElement();
+    });
   }
 
   showTextControls() {
