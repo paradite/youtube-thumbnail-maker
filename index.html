@@ -1,218 +1,344 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YouTube Thumbnail Maker</title>
-    <link rel="stylesheet" href="styles.css">
-    
+    <link rel="stylesheet" href="styles.css" />
+
     <!-- Person Segmentation Library -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0"></script>
-</head>
-<body>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0"
+    ></script>
+  </head>
+  <body>
     <div class="container">
-        <header>
-            <h1>YouTube Thumbnail Maker</h1>
-        </header>
-        
-        <main>
-            <div class="editor-area">
-                <div class="canvas-container">
-                    <canvas id="thumbnail-canvas" width="1280" height="720"></canvas>
-                    <div class="canvas-controls">
-                        <div id="text-controls" class="text-controls" style="display: none;">
-                            <h4>Text Settings</h4>
-                            <div class="controls-row">
-                                <div class="control-group">
-                                    <label for="text-content">Text Content:</label>
-                                    <input type="text" id="text-content" placeholder="Enter your text" value="Sample Text">
-                                </div>
-                                
-                                <div class="control-group">
-                                    <label for="text-font">Font:</label>
-                                    <select id="text-font">
-                                        <option value="Arial">Arial</option>
-                                        <option value="Helvetica">Helvetica</option>
-                                        <option value="Times New Roman">Times New Roman</option>
-                                        <option value="Georgia">Georgia</option>
-                                        <option value="Verdana">Verdana</option>
-                                        <option value="Courier New">Courier New</option>
-                                        <option value="Impact">Impact</option>
-                                        <option value="Comic Sans MS">Comic Sans MS</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="control-group">
-                                    <label for="text-size">Size:</label>
-                                    <input type="number" id="text-size" min="12" max="120" value="48" step="1">
-                                    <span>px</span>
-                                </div>
-                                
-                                <div class="control-group">
-                                    <label for="text-color">Color:</label>
-                                    <input type="color" id="text-color" value="#000000">
-                                </div>
-                                
-                                <div class="control-group">
-                                    <label for="text-weight">Weight:</label>
-                                    <select id="text-weight">
-                                        <option value="normal">Normal</option>
-                                        <option value="bold">Bold</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="control-group">
-                                    <label for="text-align">Alignment:</label>
-                                    <select id="text-align">
-                                        <option value="left">Left</option>
-                                        <option value="center">Center</option>
-                                        <option value="right">Right</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="control-group">
-                                    <label for="text-rotation">Rotation:</label>
-                                    <input type="number" id="text-rotation" min="-360" max="360" value="0" step="1">
-                                    <span>°</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div id="image-controls" class="image-controls" style="display: none;">
-                            <h4>Image Settings</h4>
-                            <div class="controls-row">
-                                <div class="control-group">
-                                    <label for="image-opacity">Opacity:</label>
-                                    <input type="range" id="image-opacity" min="0" max="100" value="100">
-                                    <span id="image-opacity-value">100%</span>
-                                </div>
-                                
-                                <div class="control-group">
-                                    <label for="image-brightness">Brightness:</label>
-                                    <input type="range" id="image-brightness" min="0" max="200" value="100">
-                                    <span id="image-brightness-value">100%</span>
-                                </div>
-                                
-                                <div class="control-group">
-                                    <label for="image-contrast">Contrast:</label>
-                                    <input type="range" id="image-contrast" min="0" max="200" value="100">
-                                    <span id="image-contrast-value">100%</span>
-                                </div>
-                                
-                                <div class="control-group">
-                                    <label for="image-saturation">Saturation:</label>
-                                    <input type="range" id="image-saturation" min="0" max="200" value="100">
-                                    <span id="image-saturation-value">100%</span>
-                                </div>
-                                
-                                <div class="control-group">
-                                    <label for="image-rotation">Rotation:</label>
-                                    <input type="number" id="image-rotation" min="-360" max="360" value="0" step="1">
-                                    <span>°</span>
-                                </div>
-                                
-                                <div class="control-group">
-                                    <button id="crop-image" class="btn">Crop Image</button>
-                                    <button id="extract-person" class="btn" disabled>Extract Person</button>
-                                </div>
-                                
-                                <div class="control-group">
-                                    <div id="model-status" class="model-status">Loading AI model...</div>
-                                </div>
-                                
-                                <div id="crop-controls" class="crop-controls" style="display: none;">
-                                    <div class="control-group">
-                                        <label>Crop Area:</label>
-                                        <div class="crop-inputs">
-                                            <input type="number" id="crop-x" placeholder="X" min="0">
-                                            <input type="number" id="crop-y" placeholder="Y" min="0">
-                                            <input type="number" id="crop-width" placeholder="Width" min="1">
-                                            <input type="number" id="crop-height" placeholder="Height" min="1">
-                                        </div>
-                                    </div>
-                                    <div class="control-group">
-                                        <button id="apply-crop" class="btn btn-primary">Apply Crop</button>
-                                        <button id="cancel-crop" class="btn">Cancel</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="canvas-actions">
-                            <button id="delete-element" class="btn btn-danger" disabled>Delete Selected</button>
-                        </div>
-                    </div>
+      <header>
+        <h1>YouTube Thumbnail Maker</h1>
+      </header>
+
+      <main>
+        <div class="editor-area">
+          <div class="canvas-container">
+            <canvas id="thumbnail-canvas" width="1280" height="720"></canvas>
+            <div class="canvas-controls">
+              <div id="text-controls" class="text-controls" style="display: none">
+                <h4>Text Settings</h4>
+                <div class="controls-row">
+                  <div class="control-group">
+                    <label for="text-content">Text Content:</label>
+                    <input
+                      type="text"
+                      id="text-content"
+                      placeholder="Enter your text"
+                      value="Sample Text"
+                    />
+                  </div>
+
+                  <div class="control-group">
+                    <label for="text-font">Font:</label>
+                    <select id="text-font">
+                      <option value="Arial">Arial</option>
+                      <option value="Helvetica">Helvetica</option>
+                      <option value="Times New Roman">Times New Roman</option>
+                      <option value="Georgia">Georgia</option>
+                      <option value="Verdana">Verdana</option>
+                      <option value="Courier New">Courier New</option>
+                      <option value="Impact">Impact</option>
+                      <option value="Comic Sans MS">Comic Sans MS</option>
+                    </select>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="text-size">Size:</label>
+                    <input
+                      type="number"
+                      id="text-size"
+                      min="12"
+                      max="120"
+                      value="48"
+                      step="1"
+                    />
+                    <span>px</span>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="text-color">Color:</label>
+                    <input type="color" id="text-color" value="#000000" />
+                  </div>
+
+                  <div class="control-group">
+                    <label for="text-weight">Weight:</label>
+                    <select id="text-weight">
+                      <option value="normal">Normal</option>
+                      <option value="bold">Bold</option>
+                    </select>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="text-align">Alignment:</label>
+                    <select id="text-align">
+                      <option value="left">Left</option>
+                      <option value="center">Center</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="text-rotation">Rotation:</label>
+                    <input
+                      type="number"
+                      id="text-rotation"
+                      min="-360"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span>°</span>
+                  </div>
                 </div>
-                
-                <div class="toolbar">
-                    <div class="tool-section">
-                        <h3>Background</h3>
-                        <div class="color-picker">
-                            <input type="color" id="bg-color" value="#ffffff">
-                            <label for="bg-color">Custom Color</label>
-                        </div>
-                        
-                        <div class="color-palette">
-                            <h4>Quick Colors</h4>
-                            <div class="palette-grid">
-                                <div class="palette-color" data-color="#ff4444" style="background-color: #ff4444"></div>
-                                <div class="palette-color" data-color="#ff6b35" style="background-color: #ff6b35"></div>
-                                <div class="palette-color" data-color="#ffb347" style="background-color: #ffb347"></div>
-                                <div class="palette-color" data-color="#ffd700" style="background-color: #ffd700"></div>
-                                <div class="palette-color" data-color="#00d4aa" style="background-color: #00d4aa"></div>
-                                <div class="palette-color" data-color="#00bfff" style="background-color: #00bfff"></div>
-                                <div class="palette-color" data-color="#7b68ee" style="background-color: #7b68ee"></div>
-                                <div class="palette-color" data-color="#ff1493" style="background-color: #ff1493"></div>
-                                <div class="palette-color" data-color="#32cd32" style="background-color: #32cd32"></div>
-                                <div class="palette-color" data-color="#9932cc" style="background-color: #9932cc"></div>
-                                <div class="palette-color" data-color="#1a1a1a" style="background-color: #1a1a1a"></div>
-                                <div class="palette-color" data-color="#ffffff" style="background-color: #ffffff"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="pattern-options">
-                            <h4>Patterns</h4>
-                            <div class="pattern-grid">
-                                <button class="pattern-btn" data-pattern="solid">Solid</button>
-                                <button class="pattern-btn" data-pattern="gradient">Gradient</button>
-                                <button class="pattern-btn" data-pattern="stripes">Stripes</button>
-                                <button class="pattern-btn" data-pattern="dots">Dots</button>
-                            </div>
-                        </div>
+              </div>
+
+              <div id="image-controls" class="image-controls" style="display: none">
+                <h4>Image Settings</h4>
+                <div class="controls-row">
+                  <div class="control-group">
+                    <label for="image-opacity">Opacity:</label>
+                    <input
+                      type="range"
+                      id="image-opacity"
+                      min="0"
+                      max="100"
+                      value="100"
+                    />
+                    <span id="image-opacity-value">100%</span>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="image-brightness">Brightness:</label>
+                    <input
+                      type="range"
+                      id="image-brightness"
+                      min="0"
+                      max="200"
+                      value="100"
+                    />
+                    <span id="image-brightness-value">100%</span>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="image-contrast">Contrast:</label>
+                    <input
+                      type="range"
+                      id="image-contrast"
+                      min="0"
+                      max="200"
+                      value="100"
+                    />
+                    <span id="image-contrast-value">100%</span>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="image-saturation">Saturation:</label>
+                    <input
+                      type="range"
+                      id="image-saturation"
+                      min="0"
+                      max="200"
+                      value="100"
+                    />
+                    <span id="image-saturation-value">100%</span>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="image-rotation">Rotation:</label>
+                    <input
+                      type="number"
+                      id="image-rotation"
+                      min="-360"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span>°</span>
+                  </div>
+
+                  <div class="control-group">
+                    <button id="crop-image" class="btn">Crop Image</button>
+                    <button id="extract-person" class="btn" disabled>
+                      Extract Person
+                    </button>
+                  </div>
+
+                  <div class="control-group">
+                    <div id="model-status" class="model-status">Loading AI model...</div>
+                  </div>
+
+                  <div id="crop-controls" class="crop-controls" style="display: none">
+                    <div class="control-group">
+                      <label>Crop Area:</label>
+                      <div class="crop-inputs">
+                        <input type="number" id="crop-x" placeholder="X" min="0" />
+                        <input type="number" id="crop-y" placeholder="Y" min="0" />
+                        <input
+                          type="number"
+                          id="crop-width"
+                          placeholder="Width"
+                          min="1"
+                        />
+                        <input
+                          type="number"
+                          id="crop-height"
+                          placeholder="Height"
+                          min="1"
+                        />
+                      </div>
                     </div>
-                    
-                    <div class="tool-section">
-                        <h3>Text</h3>
-                        <button id="add-text" class="btn">Add Text</button>
-                        
+                    <div class="control-group">
+                      <button id="apply-crop" class="btn btn-primary">Apply Crop</button>
+                      <button id="cancel-crop" class="btn">Cancel</button>
                     </div>
-                    
-                    <div class="tool-section">
-                        <h3>Image</h3>
-                        <input type="file" id="image-upload" accept="image/*" style="display: none;">
-                        <button id="add-image" class="btn">Add Image</button>
-                        
-                    </div>
-                    
-                    
-                    <div class="tool-section">
-                        <h3>Save as Image</h3>
-                        <button id="export-jpg" class="btn">Download JPG</button>
-                        <button id="export-png" class="btn">Download PNG</button>
-                    </div>
-                    
-                    <div class="tool-section">
-                        <h3>Project</h3>
-                        <button id="export-project" class="btn">Export Project</button>
-                        <input type="file" id="import-project-input" accept=".json" style="display: none;">
-                        <button id="import-project" class="btn">Import Project</button>
-                    </div>
+                  </div>
                 </div>
+              </div>
+
+              <div class="canvas-actions">
+                <button id="cycle-elements" class="btn">Cycle Elements</button>
+                <button id="delete-element" class="btn btn-danger" disabled>
+                  Delete Selected
+                </button>
+              </div>
             </div>
-        </main>
+          </div>
+
+          <div class="toolbar">
+            <div class="tool-section">
+              <h3>Background</h3>
+              <div class="color-picker">
+                <input type="color" id="bg-color" value="#ffffff" />
+                <label for="bg-color">Custom Color</label>
+              </div>
+
+              <div class="color-palette">
+                <h4>Quick Colors</h4>
+                <div class="palette-grid">
+                  <div
+                    class="palette-color"
+                    data-color="#ff4444"
+                    style="background-color: #ff4444"
+                  ></div>
+                  <div
+                    class="palette-color"
+                    data-color="#ff6b35"
+                    style="background-color: #ff6b35"
+                  ></div>
+                  <div
+                    class="palette-color"
+                    data-color="#ffb347"
+                    style="background-color: #ffb347"
+                  ></div>
+                  <div
+                    class="palette-color"
+                    data-color="#ffd700"
+                    style="background-color: #ffd700"
+                  ></div>
+                  <div
+                    class="palette-color"
+                    data-color="#00d4aa"
+                    style="background-color: #00d4aa"
+                  ></div>
+                  <div
+                    class="palette-color"
+                    data-color="#00bfff"
+                    style="background-color: #00bfff"
+                  ></div>
+                  <div
+                    class="palette-color"
+                    data-color="#7b68ee"
+                    style="background-color: #7b68ee"
+                  ></div>
+                  <div
+                    class="palette-color"
+                    data-color="#ff1493"
+                    style="background-color: #ff1493"
+                  ></div>
+                  <div
+                    class="palette-color"
+                    data-color="#32cd32"
+                    style="background-color: #32cd32"
+                  ></div>
+                  <div
+                    class="palette-color"
+                    data-color="#9932cc"
+                    style="background-color: #9932cc"
+                  ></div>
+                  <div
+                    class="palette-color"
+                    data-color="#1a1a1a"
+                    style="background-color: #1a1a1a"
+                  ></div>
+                  <div
+                    class="palette-color"
+                    data-color="#ffffff"
+                    style="background-color: #ffffff"
+                  ></div>
+                </div>
+              </div>
+
+              <div class="pattern-options">
+                <h4>Patterns</h4>
+                <div class="pattern-grid">
+                  <button class="pattern-btn" data-pattern="solid">Solid</button>
+                  <button class="pattern-btn" data-pattern="gradient">Gradient</button>
+                  <button class="pattern-btn" data-pattern="stripes">Stripes</button>
+                  <button class="pattern-btn" data-pattern="dots">Dots</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="tool-section">
+              <h3>Text</h3>
+              <button id="add-text" class="btn">Add Text</button>
+            </div>
+
+            <div class="tool-section">
+              <h3>Image</h3>
+              <input
+                type="file"
+                id="image-upload"
+                accept="image/*"
+                style="display: none"
+              />
+              <button id="add-image" class="btn">Add Image</button>
+            </div>
+
+            <div class="tool-section">
+              <h3>Save as Image</h3>
+              <button id="export-jpg" class="btn">Download JPG</button>
+              <button id="export-png" class="btn">Download PNG</button>
+            </div>
+
+            <div class="tool-section">
+              <h3>Project</h3>
+              <button id="export-project" class="btn">Export Project</button>
+              <input
+                type="file"
+                id="import-project-input"
+                accept=".json"
+                style="display: none"
+              />
+              <button id="import-project" class="btn">Import Project</button>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
-    
+
     <script type="module" src="main.js"></script>
-</body>
+  </body>
 </html>
