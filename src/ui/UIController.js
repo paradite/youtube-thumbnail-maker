@@ -90,6 +90,23 @@ export class UIController {
       }
     });
 
+    // Shape buttons
+    const addRectangleBtn = document.getElementById('add-rectangle');
+    const addCircleBtn = document.getElementById('add-circle');
+    const addTriangleBtn = document.getElementById('add-triangle');
+
+    addRectangleBtn.addEventListener('click', () => {
+      this.canvasManager.addShapeElement('rectangle');
+    });
+
+    addCircleBtn.addEventListener('click', () => {
+      this.canvasManager.addShapeElement('circle');
+    });
+
+    addTriangleBtn.addEventListener('click', () => {
+      this.canvasManager.addShapeElement('triangle');
+    });
+
     const exportJpgBtn = document.getElementById('export-jpg');
     exportJpgBtn.addEventListener('click', () => {
       this.downloadImage('jpeg');
@@ -148,6 +165,7 @@ export class UIController {
 
     this.setupTextControls();
     this.setupImageControls();
+    this.setupShapeControls();
     this.setupKeyboardShortcuts();
   }
 
@@ -246,8 +264,15 @@ export class UIController {
         this.showTextControls();
         this.updateTextControls();
         this.hideImageControls();
+        this.hideShapeControls();
+      } else if (selectedElement.shapeType !== undefined) {
+        this.showShapeControls();
+        this.updateShapeControls();
+        this.hideTextControls();
+        this.hideImageControls();
       } else {
         this.hideTextControls();
+        this.hideShapeControls();
         this.showImageControls();
         this.updateImageControls();
       }
@@ -255,6 +280,7 @@ export class UIController {
       deleteBtn.disabled = true;
       this.hideTextControls();
       this.hideImageControls();
+      this.hideShapeControls();
     }
   }
 
@@ -633,6 +659,78 @@ export class UIController {
       personImage.onload = () => resolve(personImage);
       personImage.src = resultCanvas.toDataURL('image/png'); // PNG to preserve transparency
     });
+  }
+
+  setupShapeControls() {
+    const shapeType = document.getElementById('shape-type');
+    const shapeWidth = document.getElementById('shape-width');
+    const shapeHeight = document.getElementById('shape-height');
+    const shapeColor = document.getElementById('shape-color');
+    const shapeOpacity = document.getElementById('shape-opacity');
+    const shapeOpacityValue = document.getElementById('shape-opacity-value');
+    const shapeStrokeWidth = document.getElementById('shape-stroke-width');
+    const shapeRotation = document.getElementById('shape-rotation');
+
+    shapeType.addEventListener('change', (e) => {
+      this.canvasManager.updateSelectedElement({ shapeType: e.target.value });
+    });
+
+    shapeWidth.addEventListener('input', (e) => {
+      const width = Math.max(10, parseInt(e.target.value) || 100);
+      this.canvasManager.updateSelectedElement({ width: width });
+    });
+
+    shapeHeight.addEventListener('input', (e) => {
+      const height = Math.max(10, parseInt(e.target.value) || 100);
+      this.canvasManager.updateSelectedElement({ height: height });
+    });
+
+    shapeColor.addEventListener('change', (e) => {
+      this.canvasManager.updateSelectedElement({ color: e.target.value });
+    });
+
+    shapeOpacity.addEventListener('input', (e) => {
+      const opacity = parseInt(e.target.value) / 100;
+      shapeOpacityValue.textContent = e.target.value + '%';
+      this.canvasManager.updateSelectedElement({ opacity: opacity });
+    });
+
+    shapeStrokeWidth.addEventListener('input', (e) => {
+      const strokeWidth = Math.max(0, parseInt(e.target.value) || 0);
+      this.canvasManager.updateSelectedElement({ strokeWidth: strokeWidth });
+    });
+
+    shapeRotation.addEventListener('input', (e) => {
+      let rotation = parseInt(e.target.value) || 0;
+      this.canvasManager.updateSelectedElement({ rotation: rotation });
+    });
+  }
+
+  showShapeControls() {
+    const shapeControls = document.getElementById('shape-controls');
+    shapeControls.style.display = 'block';
+  }
+
+  hideShapeControls() {
+    const shapeControls = document.getElementById('shape-controls');
+    shapeControls.style.display = 'none';
+  }
+
+  updateShapeControls() {
+    const selectedElement = this.canvasManager.selectedElement;
+    if (selectedElement && selectedElement.shapeType !== undefined) {
+      document.getElementById('shape-type').value = selectedElement.shapeType;
+      document.getElementById('shape-width').value = selectedElement.width;
+      document.getElementById('shape-height').value = selectedElement.height;
+      document.getElementById('shape-color').value = selectedElement.color;
+      
+      const opacityValue = Math.round(selectedElement.opacity * 100);
+      document.getElementById('shape-opacity').value = opacityValue;
+      document.getElementById('shape-opacity-value').textContent = opacityValue + '%';
+      
+      document.getElementById('shape-stroke-width').value = selectedElement.strokeWidth;
+      document.getElementById('shape-rotation').value = Math.round(selectedElement.rotation) || 0;
+    }
   }
 
   setupKeyboardShortcuts() {

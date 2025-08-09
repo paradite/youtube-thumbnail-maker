@@ -229,6 +229,89 @@
                 </div>
               </div>
 
+              <div id="shape-controls" class="shape-controls" style="display: none">
+                <h4>Shape Settings</h4>
+                <div class="controls-row">
+                  <div class="control-group">
+                    <label for="shape-type">Shape:</label>
+                    <select id="shape-type">
+                      <option value="rectangle">Rectangle</option>
+                      <option value="circle">Circle</option>
+                      <option value="triangle">Triangle</option>
+                    </select>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="shape-width">Width:</label>
+                    <input
+                      type="number"
+                      id="shape-width"
+                      min="10"
+                      max="500"
+                      value="100"
+                      step="5"
+                    />
+                    <span>px</span>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="shape-height">Height:</label>
+                    <input
+                      type="number"
+                      id="shape-height"
+                      min="10"
+                      max="500"
+                      value="100"
+                      step="5"
+                    />
+                    <span>px</span>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="shape-color">Color:</label>
+                    <input type="color" id="shape-color" value="#ffffff" />
+                  </div>
+
+                  <div class="control-group">
+                    <label for="shape-opacity">Opacity:</label>
+                    <input
+                      type="range"
+                      id="shape-opacity"
+                      min="0"
+                      max="100"
+                      value="30"
+                    />
+                    <span id="shape-opacity-value">30%</span>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="shape-stroke-width">Border Width:</label>
+                    <input
+                      type="number"
+                      id="shape-stroke-width"
+                      min="0"
+                      max="10"
+                      value="2"
+                      step="1"
+                    />
+                    <span>px</span>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="shape-rotation">Rotation:</label>
+                    <input
+                      type="number"
+                      id="shape-rotation"
+                      min="-360"
+                      max="360"
+                      value="0"
+                      step="1"
+                    />
+                    <span>°</span>
+                  </div>
+                </div>
+              </div>
+
               <div class="canvas-actions">
                 <button id="delete-element" class="btn btn-danger" disabled>
                   Delete Selected
@@ -318,6 +401,10 @@
                   <button class="pattern-btn" data-pattern="gradient">Gradient</button>
                   <button class="pattern-btn" data-pattern="stripes">Stripes</button>
                   <button class="pattern-btn" data-pattern="dots">Dots</button>
+                  <button class="pattern-btn" data-pattern="geometric">Geometric</button>
+                  <button class="pattern-btn" data-pattern="hexagon">Hexagon</button>
+                  <button class="pattern-btn" data-pattern="waves">Waves</button>
+                  <button class="pattern-btn" data-pattern="circles">Circles</button>
                 </div>
               </div>
             </div>
@@ -337,6 +424,13 @@
                 style="display: none"
               />
               <button id="add-image" class="btn">Add Image</button>
+            </div>
+
+            <div class="tool-section">
+              <h3>Add Shapes</h3>
+              <button id="add-rectangle" class="btn">Rectangle</button>
+              <button id="add-circle" class="btn">Circle</button>
+              <button id="add-triangle" class="btn">Triangle</button>
             </div>
 
             <div class="tool-section">

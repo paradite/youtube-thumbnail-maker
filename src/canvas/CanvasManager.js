@@ -1,5 +1,6 @@
 import { TextElement } from '../elements/TextElement.js';
 import { ImageElement } from '../elements/ImageElement.js';
+import { ShapeElement } from '../elements/ShapeElement.js';
 import { BackgroundRenderer } from '../utils/backgroundRenderer.js';
 
 export class CanvasManager {
@@ -70,13 +71,13 @@ export class CanvasManager {
             this.isRotating = true;
             this.initialRotation = element.rotation;
 
-            // Different rotation center for text vs image
+            // Different rotation center for text vs image vs shape
             if (element.text !== undefined) {
               this.rotationCenter = {
                 x: element.x,
                 y: element.y + element.size / 2,
               };
-            } else if (element.image) {
+            } else if (element.image || element.shapeType !== undefined) {
               this.rotationCenter = {
                 x: element.x + element.width / 2,
                 y: element.y + element.height / 2,
@@ -87,10 +88,10 @@ export class CanvasManager {
             this.isResizing = true;
             this.resizeHandle = handleType;
 
-            // Store initial size for both text and image elements
+            // Store initial size for text, image and shape elements
             if (element.text !== undefined) {
               this.initialSize = element.size;
-            } else if (element.image) {
+            } else if (element.image || element.shapeType !== undefined) {
               this.initialWidth = element.width;
               this.initialHeight = element.height;
             }
@@ -170,8 +171,8 @@ export class CanvasManager {
         }
 
         this.selectedElement.size = Math.round(newSize);
-      } else if (this.selectedElement.image) {
-        // Image element resizing
+      } else if (this.selectedElement.image || this.selectedElement.shapeType !== undefined) {
+        // Image and shape element resizing
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         const scaleFactor =
           deltaX > 0 || deltaY > 0 ? 1 + distance / 200 : 1 - distance / 200;
@@ -351,6 +352,36 @@ export class CanvasManager {
     return imageElement;
   }
 
+  addShapeElement(shapeType = 'rectangle', x = 100, y = 100) {
+    // Set shape color based on current background to create subtle contrast
+    const shapeColor = this.currentBackgroundColor === '#ffffff' ? '#f0f0f0' : '#ffffff';
+    
+    const shapeElement = new ShapeElement(x, y, shapeType, {
+      width: 100,
+      height: 100,
+      color: shapeColor,
+      opacity: 0.3
+    });
+    
+    this.elements.push(shapeElement);
+    this.selectedElement = shapeElement;
+    shapeElement.selected = true;
+
+    this.elements.forEach((element) => {
+      if (element !== shapeElement) {
+        element.selected = false;
+      }
+    });
+
+    if (this.onSelectionChange) {
+      this.onSelectionChange(shapeElement);
+    }
+
+    this.redrawCanvas();
+    this.saveToLocalStorage();
+    return shapeElement;
+  }
+
   updateSelectedElement(options) {
     if (this.selectedElement && this.selectedElement.update) {
       this.selectedElement.update(options);
@@ -497,6 +528,12 @@ export class CanvasManager {
       elementTop = element.y;
       elementRight = element.x + element.width;
       elementBottom = element.y + element.height;
+    } else if (element.shapeType !== undefined) {
+      // Shape element
+      elementLeft = element.x;
+      elementTop = element.y;
+      elementRight = element.x + element.width;
+      elementBottom = element.y + element.height;
     } else {
       return; // Unknown element type
     }
@@ -553,6 +590,8 @@ export class CanvasManager {
           ctx.drawImage(element.image, 0, 0);
           serialized.imageData = canvas.toDataURL();
           delete serialized.image; // Remove the actual image object
+        } else if (element.shapeType !== undefined) {
+          serialized.type = 'shape';
         }
 
         return serialized;
@@ -619,6 +658,17 @@ export class CanvasManager {
               resolve();
             };
             img.src = elementData.imageData;
+          } else if (elementData.type === 'shape') {
+            const { type, ...elementProps } = elementData;
+            const shapeElement = Object.assign(
+              new ShapeElement(0, 0, 'rectangle'),
+              elementProps
+            );
+            if (elementProps.rotation === undefined) {
+              shapeElement.rotation = 0;
+            }
+            this.elements.push(shapeElement);
+            resolve();
           } else {
             resolve();
           }
@@ -669,6 +719,8 @@ export class CanvasManager {
           ctx.drawImage(element.image, 0, 0);
           serialized.imageData = canvas.toDataURL();
           delete serialized.image; // Remove the actual image object
+        } else if (element.shapeType !== undefined) {
+          serialized.type = 'shape';
         }
 
         return serialized;
@@ -731,6 +783,17 @@ export class CanvasManager {
                 resolve();
               };
               img.src = elementData.imageData;
+            } else if (elementData.type === 'shape') {
+              const { type, ...elementProps } = elementData;
+              const shapeElement = Object.assign(
+                new ShapeElement(0, 0, 'rectangle'),
+                elementProps
+              );
+              if (elementProps.rotation === undefined) {
+                shapeElement.rotation = 0;
+              }
+              this.elements.push(shapeElement);
+              resolve();
             } else {
               resolve();
             }
