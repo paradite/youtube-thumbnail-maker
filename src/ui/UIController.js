@@ -159,6 +159,8 @@ export class UIController {
     const textWeight = document.getElementById('text-weight');
     const textAlign = document.getElementById('text-align');
     const textRotation = document.getElementById('text-rotation');
+    const textOutlineWidth = document.getElementById('text-outline-width');
+    const textOutlineColor = document.getElementById('text-outline-color');
 
     textContent.addEventListener('input', (e) => {
       this.canvasManager.updateSelectedElement({ text: e.target.value });
@@ -190,6 +192,15 @@ export class UIController {
       this.canvasManager.updateSelectedElement({ rotation: rotation });
     });
 
+    textOutlineWidth.addEventListener('input', (e) => {
+      const width = Math.max(0, parseInt(e.target.value) || 0);
+      this.canvasManager.updateSelectedElement({ outlineWidth: width });
+    });
+
+    textOutlineColor.addEventListener('change', (e) => {
+      this.canvasManager.updateSelectedElement({ outlineColor: e.target.value });
+    });
+
     const duplicateTextBtn = document.getElementById('duplicate-text');
     duplicateTextBtn.addEventListener('click', () => {
       this.canvasManager.duplicateSelectedTextElement();
@@ -217,6 +228,11 @@ export class UIController {
       document.getElementById('text-align').value = selectedElement.align;
       document.getElementById('text-rotation').value =
         Math.round(selectedElement.rotation) || 0;
+      document.getElementById('text-outline-width').value = Math.round(
+        selectedElement.outlineWidth || 0
+      );
+      document.getElementById('text-outline-color').value =
+        selectedElement.outlineColor || '#ffffff';
     }
   }
 

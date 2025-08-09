@@ -9,6 +9,8 @@ export class TextElement {
     this.weight = options.weight || 'normal';
     this.align = options.align || 'left';
     this.rotation = options.rotation || 0;
+    this.outlineWidth = options.outlineWidth || 0; // 0 means no outline
+    this.outlineColor = options.outlineColor || '#ffffff';
     this.selected = false;
     this.id = Date.now() + Math.random();
   }
@@ -19,6 +21,12 @@ export class TextElement {
     ctx.fillStyle = this.color;
     ctx.textAlign = this.align;
     ctx.textBaseline = 'top';
+    if (this.outlineWidth > 0) {
+      ctx.lineWidth = this.outlineWidth;
+      ctx.strokeStyle = this.outlineColor;
+      ctx.lineJoin = 'round';
+      ctx.miterLimit = 2;
+    }
 
     if (this.rotation !== 0) {
       // Calculate the center point for rotation based on text alignment
@@ -43,8 +51,14 @@ export class TextElement {
       // Reset text alignment to center for rotated text
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      if (this.outlineWidth > 0) {
+        ctx.strokeText(this.text, 0, 0);
+      }
       ctx.fillText(this.text, 0, 0);
     } else {
+      if (this.outlineWidth > 0) {
+        ctx.strokeText(this.text, this.x, this.y);
+      }
       ctx.fillText(this.text, this.x, this.y);
     }
 
@@ -282,5 +296,7 @@ export class TextElement {
     if (options.weight !== undefined) this.weight = options.weight;
     if (options.align !== undefined) this.align = options.align;
     if (options.rotation !== undefined) this.rotation = options.rotation;
+    if (options.outlineWidth !== undefined) this.outlineWidth = options.outlineWidth;
+    if (options.outlineColor !== undefined) this.outlineColor = options.outlineColor;
   }
 }

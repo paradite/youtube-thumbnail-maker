@@ -407,6 +407,8 @@ export class CanvasManager {
           weight: originalElement.weight,
           align: originalElement.align,
           rotation: originalElement.rotation,
+          outlineWidth: originalElement.outlineWidth,
+          outlineColor: originalElement.outlineColor,
         }
       );
 
