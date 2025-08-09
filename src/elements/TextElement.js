@@ -218,7 +218,16 @@ export class TextElement {
     if (this.rotation === 0) {
       return x >= startX && x <= startX + width && y >= this.y && y <= this.y + height;
     } else {
-      const centerX = this.x;
+      // Compute the same rotation center used during render/renderSelection
+      let centerX = this.x;
+      if (this.align === 'center') {
+        centerX = this.x;
+      } else if (this.align === 'right') {
+        centerX = this.x - width / 2;
+      } else {
+        // left
+        centerX = this.x + width / 2;
+      }
       const centerY = this.y + this.size / 2;
 
       const rotatedPoint = this.rotatePoint(x, y, centerX, centerY, -this.rotation);
