@@ -107,6 +107,18 @@ export class UIController {
       this.canvasManager.addShapeElement('triangle');
     });
 
+    // Arrow buttons
+    const addStraightArrowBtn = document.getElementById('add-straight-arrow');
+    const addCurvedArrowBtn = document.getElementById('add-curved-arrow');
+
+    addStraightArrowBtn.addEventListener('click', () => {
+      this.canvasManager.addArrowElement('straight');
+    });
+
+    addCurvedArrowBtn.addEventListener('click', () => {
+      this.canvasManager.addArrowElement('curved');
+    });
+
     const exportJpgBtn = document.getElementById('export-jpg');
     exportJpgBtn.addEventListener('click', () => {
       this.downloadImage('jpeg');
@@ -265,14 +277,23 @@ export class UIController {
         this.updateTextControls();
         this.hideImageControls();
         this.hideShapeControls();
+        this.hideArrowControls();
       } else if (selectedElement.shapeType !== undefined) {
         this.showShapeControls();
         this.updateShapeControls();
         this.hideTextControls();
         this.hideImageControls();
+        this.hideArrowControls();
+      } else if (selectedElement.arrowType !== undefined) {
+        this.showArrowControls();
+        this.updateArrowControls();
+        this.hideTextControls();
+        this.hideImageControls();
+        this.hideShapeControls();
       } else {
         this.hideTextControls();
         this.hideShapeControls();
+        this.hideArrowControls();
         this.showImageControls();
         this.updateImageControls();
       }
@@ -281,6 +302,7 @@ export class UIController {
       this.hideTextControls();
       this.hideImageControls();
       this.hideShapeControls();
+      this.hideArrowControls();
     }
   }
 
@@ -704,6 +726,49 @@ export class UIController {
       let rotation = parseInt(e.target.value) || 0;
       this.canvasManager.updateSelectedElement({ rotation: rotation });
     });
+
+    // Arrow controls
+    const arrowType = document.getElementById('arrow-type');
+    const arrowColor = document.getElementById('arrow-color');
+    const arrowOpacity = document.getElementById('arrow-opacity');
+    const arrowOpacityValue = document.getElementById('arrow-opacity-value');
+    const arrowStrokeWidth = document.getElementById('arrow-stroke-width');
+    const arrowHeadSize = document.getElementById('arrow-head-size');
+    const arrowCurvature = document.getElementById('arrow-curvature');
+    const arrowCurvatureValue = document.getElementById('arrow-curvature-value');
+
+    arrowType.addEventListener('change', (e) => {
+      const newType = e.target.value;
+      this.canvasManager.updateSelectedElement({ arrowType: newType });
+      this.updateArrowCurvatureVisibility(newType);
+    });
+
+    arrowColor.addEventListener('change', (e) => {
+      this.canvasManager.updateSelectedElement({ color: e.target.value });
+    });
+
+    arrowOpacity.addEventListener('input', (e) => {
+      const opacity = parseInt(e.target.value) / 100;
+      arrowOpacityValue.textContent = e.target.value + '%';
+      this.canvasManager.updateSelectedElement({ opacity: opacity });
+    });
+
+    arrowStrokeWidth.addEventListener('input', (e) => {
+      const strokeWidth = Math.max(1, parseInt(e.target.value) || 1);
+      this.canvasManager.updateSelectedElement({ strokeWidth: strokeWidth });
+    });
+
+    arrowHeadSize.addEventListener('input', (e) => {
+      const headSize = Math.max(5, parseInt(e.target.value) || 5);
+      this.canvasManager.updateSelectedElement({ arrowheadSize: headSize });
+    });
+
+    arrowCurvature.addEventListener('input', (e) => {
+      const curvature = parseInt(e.target.value) / 100;
+      const sign = curvature >= 0 ? '+' : '';
+      arrowCurvatureValue.textContent = sign + e.target.value + '%';
+      this.canvasManager.updateSelectedElement({ curvature: curvature });
+    });
   }
 
   showShapeControls() {
@@ -714,6 +779,25 @@ export class UIController {
   hideShapeControls() {
     const shapeControls = document.getElementById('shape-controls');
     shapeControls.style.display = 'none';
+  }
+
+  showArrowControls() {
+    const arrowControls = document.getElementById('arrow-controls');
+    arrowControls.style.display = 'block';
+  }
+
+  hideArrowControls() {
+    const arrowControls = document.getElementById('arrow-controls');
+    arrowControls.style.display = 'none';
+  }
+
+  updateArrowCurvatureVisibility(arrowType) {
+    const curvatureGroup = document.getElementById('arrow-curvature-group');
+    if (arrowType === 'curved') {
+      curvatureGroup.style.display = 'block';
+    } else {
+      curvatureGroup.style.display = 'none';
+    }
   }
 
   updateShapeControls() {
@@ -730,6 +814,28 @@ export class UIController {
       
       document.getElementById('shape-stroke-width').value = selectedElement.strokeWidth;
       document.getElementById('shape-rotation').value = Math.round(selectedElement.rotation) || 0;
+    }
+  }
+
+  updateArrowControls() {
+    const selectedElement = this.canvasManager.selectedElement;
+    if (selectedElement && selectedElement.arrowType !== undefined) {
+      document.getElementById('arrow-type').value = selectedElement.arrowType;
+      document.getElementById('arrow-color').value = selectedElement.color;
+      
+      const opacityValue = Math.round(selectedElement.opacity * 100);
+      document.getElementById('arrow-opacity').value = opacityValue;
+      document.getElementById('arrow-opacity-value').textContent = opacityValue + '%';
+      
+      document.getElementById('arrow-stroke-width').value = selectedElement.strokeWidth;
+      document.getElementById('arrow-head-size').value = selectedElement.arrowheadSize;
+      
+      const curvatureValue = Math.round(selectedElement.curvature * 100);
+      const sign = curvatureValue >= 0 ? '+' : '';
+      document.getElementById('arrow-curvature').value = curvatureValue;
+      document.getElementById('arrow-curvature-value').textContent = sign + curvatureValue + '%';
+      
+      this.updateArrowCurvatureVisibility(selectedElement.arrowType);
     }
   }
 

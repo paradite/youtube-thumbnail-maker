@@ -1,6 +1,7 @@
 import { TextElement } from '../elements/TextElement.js';
 import { ImageElement } from '../elements/ImageElement.js';
 import { ShapeElement } from '../elements/ShapeElement.js';
+import { ArrowElement } from '../elements/ArrowElement.js';
 import { BackgroundRenderer } from '../utils/backgroundRenderer.js';
 
 export class CanvasManager {
@@ -71,7 +72,7 @@ export class CanvasManager {
             this.isRotating = true;
             this.initialRotation = element.rotation;
 
-            // Different rotation center for text vs image vs shape
+            // Different rotation center for text vs image vs shape vs arrow
             if (element.text !== undefined) {
               this.rotationCenter = {
                 x: element.x,
@@ -82,18 +83,26 @@ export class CanvasManager {
                 x: element.x + element.width / 2,
                 y: element.y + element.height / 2,
               };
+            } else if (element.arrowType !== undefined) {
+              this.rotationCenter = {
+                x: (element.x + element.x2) / 2,
+                y: (element.y + element.y2) / 2,
+              };
             }
             this.initialMousePos = { x, y };
           } else {
             this.isResizing = true;
             this.resizeHandle = handleType;
 
-            // Store initial size for text, image and shape elements
+            // Store initial size for text, image, shape and arrow elements
             if (element.text !== undefined) {
               this.initialSize = element.size;
             } else if (element.image || element.shapeType !== undefined) {
               this.initialWidth = element.width;
               this.initialHeight = element.height;
+            } else if (element.arrowType !== undefined) {
+              this.initialArrowStart = { x: element.x, y: element.y };
+              this.initialArrowEnd = { x: element.x2, y: element.y2 };
             }
             this.initialMousePos = { x, y };
           }
@@ -182,13 +191,49 @@ export class CanvasManager {
 
         this.selectedElement.width = Math.round(newWidth);
         this.selectedElement.height = Math.round(newHeight);
+      } else if (this.selectedElement.arrowType !== undefined) {
+        // Arrow element resizing/moving handles
+        if (this.resizeHandle === 'start') {
+          this.selectedElement.x = x;
+          this.selectedElement.y = y;
+        } else if (this.resizeHandle === 'end') {
+          this.selectedElement.x2 = x;
+          this.selectedElement.y2 = y;
+        } else if (this.resizeHandle === 'control' && this.selectedElement.arrowType === 'curved') {
+          // Adjust curvature based on control point movement
+          const midX = (this.selectedElement.x + this.selectedElement.x2) / 2;
+          const midY = (this.selectedElement.y + this.selectedElement.y2) / 2;
+          const distance = Math.sqrt((x - midX) ** 2 + (y - midY) ** 2);
+          const arrowLength = Math.sqrt(
+            (this.selectedElement.x2 - this.selectedElement.x) ** 2 +
+            (this.selectedElement.y2 - this.selectedElement.y) ** 2
+          );
+          // Calculate signed distance based on which side of the line the control point is on
+          const dx = this.selectedElement.x2 - this.selectedElement.x;
+          const dy = this.selectedElement.y2 - this.selectedElement.y;
+          const crossProduct = (x - this.selectedElement.x) * dy - (y - this.selectedElement.y) * dx;
+          const signedDistance = crossProduct >= 0 ? distance : -distance;
+          this.selectedElement.curvature = Math.max(-1, Math.min(1, signedDistance / arrowLength));
+        }
+        this.selectedElement.updateBounds();
       }
 
       this.redrawCanvas();
     } else if (this.isDragging && this.selectedElement) {
       this.canvas.style.cursor = 'move';
-      this.selectedElement.x = x - this.dragOffset.x;
-      this.selectedElement.y = y - this.dragOffset.y;
+      if (this.selectedElement.arrowType !== undefined) {
+        // For arrows, move both start and end points
+        const deltaX = (x - this.dragOffset.x) - this.selectedElement.x;
+        const deltaY = (y - this.dragOffset.y) - this.selectedElement.y;
+        this.selectedElement.x = x - this.dragOffset.x;
+        this.selectedElement.y = y - this.dragOffset.y;
+        this.selectedElement.x2 += deltaX;
+        this.selectedElement.y2 += deltaY;
+        this.selectedElement.updateBounds();
+      } else {
+        this.selectedElement.x = x - this.dragOffset.x;
+        this.selectedElement.y = y - this.dragOffset.y;
+      }
       this.redrawCanvas();
     } else {
       this.updateCursor(x, y);
@@ -382,6 +427,37 @@ export class CanvasManager {
     return shapeElement;
   }
 
+  addArrowElement(arrowType = 'straight', x = 100, y = 100) {
+    const arrowColor = this.currentBackgroundColor === '#ffffff' ? '#000000' : '#ffffff';
+    
+    const arrowElement = new ArrowElement(x, y, {
+      arrowType: arrowType,
+      color: arrowColor,
+      opacity: 1.0,
+      strokeWidth: 3,
+      arrowheadSize: 15,
+      curvature: arrowType === 'curved' ? 0.3 : 0.0
+    });
+    
+    this.elements.push(arrowElement);
+    this.selectedElement = arrowElement;
+    arrowElement.selected = true;
+
+    this.elements.forEach((element) => {
+      if (element !== arrowElement) {
+        element.selected = false;
+      }
+    });
+
+    if (this.onSelectionChange) {
+      this.onSelectionChange(arrowElement);
+    }
+
+    this.redrawCanvas();
+    this.saveToLocalStorage();
+    return arrowElement;
+  }
+
   updateSelectedElement(options) {
     if (this.selectedElement && this.selectedElement.update) {
       this.selectedElement.update(options);
@@ -534,6 +610,12 @@ export class CanvasManager {
       elementTop = element.y;
       elementRight = element.x + element.width;
       elementBottom = element.y + element.height;
+    } else if (element.arrowType !== undefined) {
+      // Arrow element
+      elementLeft = Math.min(element.x, element.x2);
+      elementTop = Math.min(element.y, element.y2);
+      elementRight = Math.max(element.x, element.x2);
+      elementBottom = Math.max(element.y, element.y2);
     } else {
       return; // Unknown element type
     }
@@ -592,6 +674,9 @@ export class CanvasManager {
           delete serialized.image; // Remove the actual image object
         } else if (element.shapeType !== undefined) {
           serialized.type = 'shape';
+        } else if (element.arrowType !== undefined) {
+          serialized.type = 'arrow';
+          console.log('Saving arrow:', serialized);
         }
 
         return serialized;
@@ -669,6 +754,20 @@ export class CanvasManager {
             }
             this.elements.push(shapeElement);
             resolve();
+          } else if (elementData.type === 'arrow') {
+            console.log('Importing arrow:', elementData);
+            const { type, ...elementProps } = elementData;
+            const arrowElement = Object.assign(
+              new ArrowElement(0, 0),
+              elementProps
+            );
+            if (elementProps.rotation === undefined) {
+              arrowElement.rotation = 0;
+            }
+            arrowElement.updateBounds(); // Recalculate bounds after loading
+            console.log('Arrow imported successfully:', arrowElement);
+            this.elements.push(arrowElement);
+            resolve();
           } else {
             resolve();
           }
@@ -721,6 +820,9 @@ export class CanvasManager {
           delete serialized.image; // Remove the actual image object
         } else if (element.shapeType !== undefined) {
           serialized.type = 'shape';
+        } else if (element.arrowType !== undefined) {
+          serialized.type = 'arrow';
+          console.log('Saving arrow:', serialized);
         }
 
         return serialized;
@@ -793,6 +895,20 @@ export class CanvasManager {
                 shapeElement.rotation = 0;
               }
               this.elements.push(shapeElement);
+              resolve();
+            } else if (elementData.type === 'arrow') {
+              console.log('Loading arrow from localStorage:', elementData);
+              const { type, ...elementProps } = elementData;
+              const arrowElement = Object.assign(
+                new ArrowElement(0, 0),
+                elementProps
+              );
+              if (elementProps.rotation === undefined) {
+                arrowElement.rotation = 0;
+              }
+              arrowElement.updateBounds(); // Recalculate bounds after loading
+              console.log('Arrow loaded successfully:', arrowElement);
+              this.elements.push(arrowElement);
               resolve();
             } else {
               resolve();
