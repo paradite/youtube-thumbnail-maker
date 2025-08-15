@@ -380,6 +380,28 @@
                 </div>
               </div>
 
+              <div id="layer-controls" class="layer-controls" style="display: none">
+                <h4>Layer Controls</h4>
+                <div class="controls-row">
+                  <div class="control-group">
+                    <button id="bring-to-front" class="btn" title="Bring to Front">
+                      Bring to Front
+                    </button>
+                    <button id="bring-forward" class="btn" title="Bring Forward">
+                      ↑
+                    </button>
+                  </div>
+                  <div class="control-group">
+                    <button id="send-backward" class="btn" title="Send Backward">
+                      ↓
+                    </button>
+                    <button id="send-to-back" class="btn" title="Send to Back">
+                      Send to Back
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div class="canvas-actions">
                 <button id="delete-element" class="btn btn-danger" disabled>
                   Delete Selected
@@ -480,6 +502,15 @@
             <div class="tool-section">
               <h3>Elements</h3>
               <button id="cycle-elements" class="btn">Cycle Elements</button>
+            </div>
+
+            <div class="tool-section">
+              <h3>Layers</h3>
+              <div id="layers-panel" class="layers-panel">
+                <div class="layers-list">
+                  <!-- Dynamic content will be populated here -->
+                </div>
+              </div>
             </div>
 
             <div class="tool-section">

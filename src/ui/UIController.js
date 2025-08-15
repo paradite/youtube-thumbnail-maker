@@ -37,6 +37,7 @@ export class UIController {
     const addTextBtn = document.getElementById('add-text');
     addTextBtn.addEventListener('click', () => {
       this.canvasManager.addTextElement();
+      this.updateLayersPanel();
     });
 
     const addImageBtn = document.getElementById('add-image');
@@ -72,6 +73,7 @@ export class UIController {
           img.onload = () => {
             console.log('Image loaded:', img.width + 'x' + img.height);
             this.canvasManager.addImageElement(img);
+            this.updateLayersPanel();
 
             // Clear the file input so the same file can be selected again
             imageUpload.value = '';
@@ -97,14 +99,17 @@ export class UIController {
 
     addRectangleBtn.addEventListener('click', () => {
       this.canvasManager.addShapeElement('rectangle');
+      this.updateLayersPanel();
     });
 
     addCircleBtn.addEventListener('click', () => {
       this.canvasManager.addShapeElement('circle');
+      this.updateLayersPanel();
     });
 
     addTriangleBtn.addEventListener('click', () => {
       this.canvasManager.addShapeElement('triangle');
+      this.updateLayersPanel();
     });
 
     // Arrow buttons
@@ -113,10 +118,12 @@ export class UIController {
 
     addStraightArrowBtn.addEventListener('click', () => {
       this.canvasManager.addArrowElement('straight');
+      this.updateLayersPanel();
     });
 
     addCurvedArrowBtn.addEventListener('click', () => {
       this.canvasManager.addArrowElement('curved');
+      this.updateLayersPanel();
     });
 
     const exportJpgBtn = document.getElementById('export-jpg');
@@ -178,6 +185,7 @@ export class UIController {
     this.setupTextControls();
     this.setupImageControls();
     this.setupShapeControls();
+    this.setupLayerControls();
     this.setupKeyboardShortcuts();
   }
 
@@ -234,6 +242,7 @@ export class UIController {
     const duplicateTextBtn = document.getElementById('duplicate-text');
     duplicateTextBtn.addEventListener('click', () => {
       this.canvasManager.duplicateSelectedTextElement();
+      this.updateLayersPanel();
     });
   }
 
@@ -271,6 +280,7 @@ export class UIController {
 
     if (selectedElement) {
       deleteBtn.disabled = false;
+      this.showLayerControls();
 
       if (selectedElement.text !== undefined) {
         this.showTextControls();
@@ -299,11 +309,14 @@ export class UIController {
       }
     } else {
       deleteBtn.disabled = true;
+      this.hideLayerControls();
       this.hideTextControls();
       this.hideImageControls();
       this.hideShapeControls();
       this.hideArrowControls();
     }
+    
+    this.updateLayersPanel();
   }
 
   downloadImage(format) {
@@ -600,6 +613,7 @@ export class UIController {
         const personElementX = selectedElement.x + 50;
         const personElementY = selectedElement.y + 50;
         this.canvasManager.addImageElement(maskedImage, personElementX, personElementY);
+        this.updateLayersPanel();
 
         alert('Person extracted successfully with transparent background!');
       } else {
@@ -839,6 +853,119 @@ export class UIController {
     }
   }
 
+  setupLayerControls() {
+    const bringToFrontBtn = document.getElementById('bring-to-front');
+    const bringForwardBtn = document.getElementById('bring-forward');
+    const sendBackwardBtn = document.getElementById('send-backward');
+    const sendToBackBtn = document.getElementById('send-to-back');
+
+    if (bringToFrontBtn) {
+      bringToFrontBtn.addEventListener('click', () => {
+        this.canvasManager.bringToFront();
+        this.updateLayersPanel();
+      });
+    }
+
+    if (bringForwardBtn) {
+      bringForwardBtn.addEventListener('click', () => {
+        this.canvasManager.bringForward();
+        this.updateLayersPanel();
+      });
+    }
+
+    if (sendBackwardBtn) {
+      sendBackwardBtn.addEventListener('click', () => {
+        this.canvasManager.sendBackward();
+        this.updateLayersPanel();
+      });
+    }
+
+    if (sendToBackBtn) {
+      sendToBackBtn.addEventListener('click', () => {
+        this.canvasManager.sendToBack();
+        this.updateLayersPanel();
+      });
+    }
+
+    // Initial layer panel update
+    this.updateLayersPanel();
+  }
+
+  showLayerControls() {
+    const layerControls = document.getElementById('layer-controls');
+    if (layerControls) {
+      layerControls.style.display = 'block';
+    }
+  }
+
+  hideLayerControls() {
+    const layerControls = document.getElementById('layer-controls');
+    if (layerControls) {
+      layerControls.style.display = 'none';
+    }
+  }
+
+  updateLayersPanel() {
+    const layersList = document.querySelector('.layers-list');
+    if (!layersList) return;
+
+    // Clear existing items
+    layersList.innerHTML = '';
+
+    // Get elements ordered by layer (top to bottom)
+    const orderedElements = this.canvasManager.getElementsOrderedByLayer().reverse();
+
+    orderedElements.forEach((element) => {
+      const layerItem = document.createElement('div');
+      layerItem.className = 'layer-item';
+      layerItem.dataset.elementId = element.id;
+
+      if (element === this.canvasManager.selectedElement) {
+        layerItem.classList.add('selected');
+      }
+
+      // Determine element type and info
+      let elementType = 'Unknown';
+      let elementInfo = '';
+
+      if (element.text !== undefined) {
+        elementType = 'Text';
+        elementInfo = element.text.length > 15 ? element.text.substring(0, 15) + '...' : element.text;
+      } else if (element.image) {
+        elementType = 'Image';
+        elementInfo = `${element.width}×${element.height}`;
+      } else if (element.shapeType !== undefined) {
+        elementType = 'Shape';
+        elementInfo = element.shapeType;
+      } else if (element.arrowType !== undefined) {
+        elementType = 'Arrow';
+        elementInfo = element.arrowType;
+      }
+
+      layerItem.innerHTML = `
+        <div>
+          <div class="layer-type">${elementType}</div>
+          <div class="layer-info">${elementInfo}</div>
+        </div>
+        <div>Layer ${element.layer}</div>
+      `;
+
+      // Click to select element
+      layerItem.addEventListener('click', () => {
+        this.canvasManager.selectedElement = element;
+        this.canvasManager.elements.forEach(el => el.selected = false);
+        element.selected = true;
+        this.canvasManager.redrawCanvas();
+        if (this.canvasManager.onSelectionChange) {
+          this.canvasManager.onSelectionChange(element);
+        }
+        this.updateLayersPanel();
+      });
+
+      layersList.appendChild(layerItem);
+    });
+  }
+
   setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
       // Only handle keyboard shortcuts when not focused on an input
@@ -854,12 +981,14 @@ export class UIController {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         this.canvasManager.deleteSelectedElement();
+        this.updateLayersPanel();
       }
 
       // Tab key to cycle through elements
       if (e.key === 'Tab') {
         e.preventDefault();
         this.canvasManager.cycleToNextElement();
+        this.updateLayersPanel();
       }
 
       // Escape key to deselect or cancel crop
@@ -879,6 +1008,7 @@ export class UIController {
         if (this.canvasManager.onSelectionChange) {
           this.canvasManager.onSelectionChange(null);
         }
+        this.updateLayersPanel();
       }
     });
   }

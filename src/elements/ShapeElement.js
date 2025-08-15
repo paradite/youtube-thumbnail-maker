@@ -14,6 +14,7 @@ export class ShapeElement {
     this.rotation = options.rotation || 0;
     this.selected = false;
     this.id = Date.now() + Math.random();
+    this.layer = options.layer || 0;
     this.resizeHandles = [];
   }
 
@@ -261,5 +262,6 @@ export class ShapeElement {
     if (options.strokeWidth !== undefined) this.strokeWidth = options.strokeWidth;
     if (options.strokeColor !== undefined) this.strokeColor = options.strokeColor;
     if (options.rotation !== undefined) this.rotation = options.rotation;
+    if (options.layer !== undefined) this.layer = options.layer;
   }
 }

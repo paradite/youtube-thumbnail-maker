@@ -13,6 +13,7 @@ export class TextElement {
     this.outlineColor = options.outlineColor || '#ffffff';
     this.selected = false;
     this.id = Date.now() + Math.random();
+    this.layer = options.layer || 0;
   }
 
   render(ctx) {
@@ -298,5 +299,6 @@ export class TextElement {
     if (options.rotation !== undefined) this.rotation = options.rotation;
     if (options.outlineWidth !== undefined) this.outlineWidth = options.outlineWidth;
     if (options.outlineColor !== undefined) this.outlineColor = options.outlineColor;
+    if (options.layer !== undefined) this.layer = options.layer;
   }
 }

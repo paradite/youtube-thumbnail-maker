@@ -15,6 +15,7 @@ export class ArrowElement {
     this.rotation = options.rotation || 0;
     this.selected = false;
     this.id = Date.now() + Math.random();
+    this.layer = options.layer || 0;
     this.resizeHandles = [];
     
     // Calculate bounding box
@@ -315,6 +316,7 @@ export class ArrowElement {
     if (options.arrowheadSize !== undefined) this.arrowheadSize = options.arrowheadSize;
     if (options.curvature !== undefined) this.curvature = options.curvature;
     if (options.rotation !== undefined) this.rotation = options.rotation;
+    if (options.layer !== undefined) this.layer = options.layer;
     
     this.updateBounds();
   }

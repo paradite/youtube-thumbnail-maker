@@ -401,6 +401,97 @@ header h1 {
     font-weight: 500;
 }
 
+/* Layer Controls */
+.layer-controls {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #f9f9f9;
+}
+
+.layer-controls h4 {
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #333;
+}
+
+.layer-controls .controls-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.layer-controls .control-group {
+    display: flex;
+    gap: 5px;
+}
+
+.layer-controls .btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-width: auto;
+}
+
+/* Layers Panel */
+.layers-panel {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.layers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.layer-item {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 8px 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.layer-item:hover {
+    background: #f0f0f0;
+}
+
+.layer-item.selected {
+    background: #e3f2fd;
+    border-color: #2196f3;
+}
+
+.layer-item .layer-type {
+    font-weight: 500;
+    color: #333;
+}
+
+.layer-item .layer-info {
+    color: #666;
+    font-size: 11px;
+}
+
+.layer-visibility {
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    margin-left: 5px;
+}
+
+.layer-visibility:hover {
+    color: #333;
+}
+
 @media (max-width: 768px) {
     .editor-area {
         flex-direction: column;

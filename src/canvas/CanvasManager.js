@@ -22,6 +22,7 @@ export class CanvasManager {
     this.initialRotation = 0;
     this.rotationCenter = { x: 0, y: 0 };
     this.onSelectionChange = null;
+    this.nextLayer = 1;
 
     this.backgroundRenderer = new BackgroundRenderer(this.canvas, this.ctx);
 
@@ -61,8 +62,10 @@ export class CanvasManager {
     this.resizeHandle = null;
     this.isRotating = false;
 
-    for (let i = this.elements.length - 1; i >= 0; i--) {
-      const element = this.elements[i];
+    // Sort elements by layer in reverse order for hit testing (top layers first)
+    const sortedElements = [...this.elements].sort((a, b) => b.layer - a.layer);
+    for (let i = 0; i < sortedElements.length; i++) {
+      const element = sortedElements[i];
 
       if (element.selected && element.isPointInResizeHandle) {
         const handleType = element.isPointInResizeHandle(x, y);
@@ -243,8 +246,10 @@ export class CanvasManager {
   updateCursor(x, y) {
     let cursor = 'default';
 
-    for (let i = this.elements.length - 1; i >= 0; i--) {
-      const element = this.elements[i];
+    // Sort elements by layer in reverse order for hit testing (top layers first)
+    const sortedElements = [...this.elements].sort((a, b) => b.layer - a.layer);
+    for (let i = 0; i < sortedElements.length; i++) {
+      const element = sortedElements[i];
 
       if (element.selected && element.isPointInResizeHandle) {
         const handleType = element.isPointInResizeHandle(x, y);
@@ -331,7 +336,9 @@ export class CanvasManager {
   }
 
   redraw() {
-    this.elements.forEach((element) => {
+    // Sort elements by layer for proper rendering order
+    const sortedElements = [...this.elements].sort((a, b) => a.layer - b.layer);
+    sortedElements.forEach((element) => {
       element.render(this.ctx);
     });
   }
@@ -342,7 +349,7 @@ export class CanvasManager {
   }
 
   addTextElement(text = 'Sample Text', x = 100, y = 100) {
-    const textElement = new TextElement(x, y, text);
+    const textElement = new TextElement(x, y, text, { layer: this.nextLayer++ });
     this.elements.push(textElement);
     this.selectedElement = textElement;
     textElement.selected = true;
@@ -377,7 +384,7 @@ export class CanvasManager {
       height *= scale;
     }
 
-    const imageElement = new ImageElement(x, y, image, { width, height });
+    const imageElement = new ImageElement(x, y, image, { width, height, layer: this.nextLayer++ });
     this.elements.push(imageElement);
     this.selectedElement = imageElement;
     imageElement.selected = true;
@@ -405,7 +412,8 @@ export class CanvasManager {
       width: 100,
       height: 100,
       color: shapeColor,
-      opacity: 0.3
+      opacity: 0.3,
+      layer: this.nextLayer++
     });
     
     this.elements.push(shapeElement);
@@ -436,7 +444,8 @@ export class CanvasManager {
       opacity: 1.0,
       strokeWidth: 3,
       arrowheadSize: 15,
-      curvature: arrowType === 'curved' ? 0.3 : 0.0
+      curvature: arrowType === 'curved' ? 0.3 : 0.0,
+      layer: this.nextLayer++
     });
     
     this.elements.push(arrowElement);
@@ -721,6 +730,9 @@ export class CanvasManager {
             if (elementProps.rotation === undefined) {
               textElement.rotation = 0;
             }
+            if (elementProps.layer === undefined) {
+              textElement.layer = 0;
+            }
             this.elements.push(textElement);
             resolve();
           } else if (elementData.type === 'image' && elementData.imageData) {
@@ -734,6 +746,9 @@ export class CanvasManager {
               imageElement.image = img;
               if (elementProps.rotation === undefined) {
                 imageElement.rotation = 0;
+              }
+              if (elementProps.layer === undefined) {
+                imageElement.layer = 0;
               }
               this.elements.push(imageElement);
               resolve();
@@ -752,6 +767,9 @@ export class CanvasManager {
             if (elementProps.rotation === undefined) {
               shapeElement.rotation = 0;
             }
+            if (elementProps.layer === undefined) {
+              shapeElement.layer = 0;
+            }
             this.elements.push(shapeElement);
             resolve();
           } else if (elementData.type === 'arrow') {
@@ -763,6 +781,9 @@ export class CanvasManager {
             );
             if (elementProps.rotation === undefined) {
               arrowElement.rotation = 0;
+            }
+            if (elementProps.layer === undefined) {
+              arrowElement.layer = 0;
             }
             arrowElement.updateBounds(); // Recalculate bounds after loading
             console.log('Arrow imported successfully:', arrowElement);
@@ -783,6 +804,12 @@ export class CanvasManager {
 
       if (projectData.backgroundPattern) {
         this.currentBackgroundPattern = projectData.backgroundPattern;
+      }
+
+      // Update nextLayer to be one higher than the highest existing layer
+      if (this.elements.length > 0) {
+        const maxLayer = Math.max(...this.elements.map(el => el.layer || 0));
+        this.nextLayer = maxLayer + 1;
       }
 
       // Redraw canvas and update UI
@@ -863,6 +890,9 @@ export class CanvasManager {
               if (elementProps.rotation === undefined) {
                 textElement.rotation = 0;
               }
+              if (elementProps.layer === undefined) {
+                textElement.layer = 0;
+              }
               this.elements.push(textElement);
               resolve();
             } else if (elementData.type === 'image' && elementData.imageData) {
@@ -876,6 +906,9 @@ export class CanvasManager {
                 imageElement.image = img;
                 if (elementProps.rotation === undefined) {
                   imageElement.rotation = 0;
+                }
+                if (elementProps.layer === undefined) {
+                  imageElement.layer = 0;
                 }
                 this.elements.push(imageElement);
                 resolve();
@@ -894,6 +927,9 @@ export class CanvasManager {
               if (elementProps.rotation === undefined) {
                 shapeElement.rotation = 0;
               }
+              if (elementProps.layer === undefined) {
+                shapeElement.layer = 0;
+              }
               this.elements.push(shapeElement);
               resolve();
             } else if (elementData.type === 'arrow') {
@@ -905,6 +941,9 @@ export class CanvasManager {
               );
               if (elementProps.rotation === undefined) {
                 arrowElement.rotation = 0;
+              }
+              if (elementProps.layer === undefined) {
+                arrowElement.layer = 0;
               }
               arrowElement.updateBounds(); // Recalculate bounds after loading
               console.log('Arrow loaded successfully:', arrowElement);
@@ -925,6 +964,12 @@ export class CanvasManager {
             this.currentBackgroundPattern = projectData.backgroundPattern;
           }
 
+          // Update nextLayer to be one higher than the highest existing layer
+          if (this.elements.length > 0) {
+            const maxLayer = Math.max(...this.elements.map(el => el.layer || 0));
+            this.nextLayer = maxLayer + 1;
+          }
+
           this.redrawCanvas();
           this.updateUIAfterLoad();
           console.log('Project loaded from localStorage');
@@ -943,5 +988,80 @@ export class CanvasManager {
     if (this.onUIUpdate) {
       this.onUIUpdate();
     }
+  }
+
+  // Layer management methods
+  bringToFront(element) {
+    if (!element) element = this.selectedElement;
+    if (!element) return false;
+    
+    const maxLayer = Math.max(...this.elements.map(el => el.layer));
+    element.layer = maxLayer + 1;
+    this.redrawCanvas();
+    this.saveToLocalStorage();
+    return true;
+  }
+
+  sendToBack(element) {
+    if (!element) element = this.selectedElement;
+    if (!element) return false;
+    
+    const minLayer = Math.min(...this.elements.map(el => el.layer));
+    element.layer = minLayer - 1;
+    this.redrawCanvas();
+    this.saveToLocalStorage();
+    return true;
+  }
+
+  bringForward(element) {
+    if (!element) element = this.selectedElement;
+    if (!element) return false;
+    
+    const sortedLayers = [...this.elements].sort((a, b) => a.layer - b.layer);
+    const currentIndex = sortedLayers.findIndex(el => el.id === element.id);
+    
+    if (currentIndex < sortedLayers.length - 1) {
+      const nextElement = sortedLayers[currentIndex + 1];
+      const temp = element.layer;
+      element.layer = nextElement.layer;
+      nextElement.layer = temp;
+      this.redrawCanvas();
+      this.saveToLocalStorage();
+      return true;
+    }
+    return false;
+  }
+
+  sendBackward(element) {
+    if (!element) element = this.selectedElement;
+    if (!element) return false;
+    
+    const sortedLayers = [...this.elements].sort((a, b) => a.layer - b.layer);
+    const currentIndex = sortedLayers.findIndex(el => el.id === element.id);
+    
+    if (currentIndex > 0) {
+      const prevElement = sortedLayers[currentIndex - 1];
+      const temp = element.layer;
+      element.layer = prevElement.layer;
+      prevElement.layer = temp;
+      this.redrawCanvas();
+      this.saveToLocalStorage();
+      return true;
+    }
+    return false;
+  }
+
+  getElementsOrderedByLayer() {
+    return [...this.elements].sort((a, b) => a.layer - b.layer);
+  }
+
+  setElementLayer(element, layer) {
+    if (!element) element = this.selectedElement;
+    if (!element) return false;
+    
+    element.layer = layer;
+    this.redrawCanvas();
+    this.saveToLocalStorage();
+    return true;
   }
 }

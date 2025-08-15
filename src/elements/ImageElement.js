@@ -10,6 +10,7 @@ export class ImageElement {
     this.rotation = options.rotation || 0;
     this.selected = false;
     this.id = Date.now() + Math.random();
+    this.layer = options.layer || 0;
 
     // Maintain aspect ratio by default
     this.aspectRatio = this.originalWidth / this.originalHeight;
@@ -276,6 +277,7 @@ export class ImageElement {
     if (options.brightness !== undefined) this.brightness = options.brightness;
     if (options.contrast !== undefined) this.contrast = options.contrast;
     if (options.saturation !== undefined) this.saturation = options.saturation;
+    if (options.layer !== undefined) this.layer = options.layer;
   }
 
   // Scale the image while maintaining aspect ratio
