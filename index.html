@@ -24,6 +24,38 @@
 
       <main>
         <div class="editor-area">
+          <div class="toolbar-left">
+            <div class="tool-section">
+              <h3>Elements</h3>
+              <button id="cycle-elements" class="btn">Cycle Elements</button>
+            </div>
+
+            <div class="tool-section">
+              <h3>Add Elements</h3>
+              <button id="add-text" class="btn">Add Text</button>
+              <input
+                type="file"
+                id="image-upload"
+                accept="image/*"
+                style="display: none"
+              />
+              <button id="add-image" class="btn">Add Image</button>
+            </div>
+
+            <div class="tool-section">
+              <h3>Add Shapes</h3>
+              <button id="add-rectangle" class="btn">Rectangle</button>
+              <button id="add-circle" class="btn">Circle</button>
+              <button id="add-triangle" class="btn">Triangle</button>
+            </div>
+
+            <div class="tool-section">
+              <h3>Add Arrows</h3>
+              <button id="add-straight-arrow" class="btn">Straight Arrow</button>
+              <button id="add-curved-arrow" class="btn">Curved Arrow</button>
+            </div>
+          </div>
+
           <div class="canvas-container">
             <canvas id="thumbnail-canvas" width="1280" height="720"></canvas>
             <div class="canvas-controls">
@@ -274,13 +306,7 @@
 
                   <div class="control-group">
                     <label for="shape-opacity">Opacity:</label>
-                    <input
-                      type="range"
-                      id="shape-opacity"
-                      min="0"
-                      max="100"
-                      value="30"
-                    />
+                    <input type="range" id="shape-opacity" min="0" max="100" value="30" />
                     <span id="shape-opacity-value">30%</span>
                   </div>
 
@@ -410,7 +436,7 @@
             </div>
           </div>
 
-          <div class="toolbar">
+          <div class="toolbar-right">
             <div class="tool-section">
               <h3>Background</h3>
               <div class="color-picker">
@@ -500,42 +526,12 @@
             </div>
 
             <div class="tool-section">
-              <h3>Elements</h3>
-              <button id="cycle-elements" class="btn">Cycle Elements</button>
-            </div>
-
-            <div class="tool-section">
               <h3>Layers</h3>
               <div id="layers-panel" class="layers-panel">
                 <div class="layers-list">
                   <!-- Dynamic content will be populated here -->
                 </div>
               </div>
-            </div>
-
-            <div class="tool-section">
-              <h3>Add Elements</h3>
-              <button id="add-text" class="btn">Add Text</button>
-              <input
-                type="file"
-                id="image-upload"
-                accept="image/*"
-                style="display: none"
-              />
-              <button id="add-image" class="btn">Add Image</button>
-            </div>
-
-            <div class="tool-section">
-              <h3>Add Shapes</h3>
-              <button id="add-rectangle" class="btn">Rectangle</button>
-              <button id="add-circle" class="btn">Circle</button>
-              <button id="add-triangle" class="btn">Triangle</button>
-            </div>
-
-            <div class="tool-section">
-              <h3>Add Arrows</h3>
-              <button id="add-straight-arrow" class="btn">Straight Arrow</button>
-              <button id="add-curved-arrow" class="btn">Curved Arrow</button>
             </div>
 
             <div class="tool-section">
