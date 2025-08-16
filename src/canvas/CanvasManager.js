@@ -183,7 +183,10 @@ export class CanvasManager {
         }
 
         this.selectedElement.size = Math.round(newSize);
-      } else if (this.selectedElement.image || this.selectedElement.shapeType !== undefined) {
+      } else if (
+        this.selectedElement.image ||
+        this.selectedElement.shapeType !== undefined
+      ) {
         // Image and shape element resizing
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         const scaleFactor =
@@ -202,21 +205,28 @@ export class CanvasManager {
         } else if (this.resizeHandle === 'end') {
           this.selectedElement.x2 = x;
           this.selectedElement.y2 = y;
-        } else if (this.resizeHandle === 'control' && this.selectedElement.arrowType === 'curved') {
+        } else if (
+          this.resizeHandle === 'control' &&
+          this.selectedElement.arrowType === 'curved'
+        ) {
           // Adjust curvature based on control point movement
           const midX = (this.selectedElement.x + this.selectedElement.x2) / 2;
           const midY = (this.selectedElement.y + this.selectedElement.y2) / 2;
           const distance = Math.sqrt((x - midX) ** 2 + (y - midY) ** 2);
           const arrowLength = Math.sqrt(
             (this.selectedElement.x2 - this.selectedElement.x) ** 2 +
-            (this.selectedElement.y2 - this.selectedElement.y) ** 2
+              (this.selectedElement.y2 - this.selectedElement.y) ** 2
           );
           // Calculate signed distance based on which side of the line the control point is on
           const dx = this.selectedElement.x2 - this.selectedElement.x;
           const dy = this.selectedElement.y2 - this.selectedElement.y;
-          const crossProduct = (x - this.selectedElement.x) * dy - (y - this.selectedElement.y) * dx;
+          const crossProduct =
+            (x - this.selectedElement.x) * dy - (y - this.selectedElement.y) * dx;
           const signedDistance = crossProduct >= 0 ? distance : -distance;
-          this.selectedElement.curvature = Math.max(-1, Math.min(1, signedDistance / arrowLength));
+          this.selectedElement.curvature = Math.max(
+            -1,
+            Math.min(1, signedDistance / arrowLength)
+          );
         }
         this.selectedElement.updateBounds();
       }
@@ -226,8 +236,8 @@ export class CanvasManager {
       this.canvas.style.cursor = 'move';
       if (this.selectedElement.arrowType !== undefined) {
         // For arrows, move both start and end points
-        const deltaX = (x - this.dragOffset.x) - this.selectedElement.x;
-        const deltaY = (y - this.dragOffset.y) - this.selectedElement.y;
+        const deltaX = x - this.dragOffset.x - this.selectedElement.x;
+        const deltaY = y - this.dragOffset.y - this.selectedElement.y;
         this.selectedElement.x = x - this.dragOffset.x;
         this.selectedElement.y = y - this.dragOffset.y;
         this.selectedElement.x2 += deltaX;
@@ -384,7 +394,11 @@ export class CanvasManager {
       height *= scale;
     }
 
-    const imageElement = new ImageElement(x, y, image, { width, height, layer: this.nextLayer++ });
+    const imageElement = new ImageElement(x, y, image, {
+      width,
+      height,
+      layer: this.nextLayer++,
+    });
     this.elements.push(imageElement);
     this.selectedElement = imageElement;
     imageElement.selected = true;
@@ -407,15 +421,15 @@ export class CanvasManager {
   addShapeElement(shapeType = 'rectangle', x = 100, y = 100) {
     // Set shape color based on current background to create subtle contrast
     const shapeColor = this.currentBackgroundColor === '#ffffff' ? '#f0f0f0' : '#ffffff';
-    
+
     const shapeElement = new ShapeElement(x, y, shapeType, {
       width: 100,
       height: 100,
       color: shapeColor,
       opacity: 0.3,
-      layer: this.nextLayer++
+      layer: this.nextLayer++,
     });
-    
+
     this.elements.push(shapeElement);
     this.selectedElement = shapeElement;
     shapeElement.selected = true;
@@ -437,7 +451,7 @@ export class CanvasManager {
 
   addArrowElement(arrowType = 'straight', x = 100, y = 100) {
     const arrowColor = this.currentBackgroundColor === '#ffffff' ? '#000000' : '#ffffff';
-    
+
     const arrowElement = new ArrowElement(x, y, {
       arrowType: arrowType,
       color: arrowColor,
@@ -445,9 +459,9 @@ export class CanvasManager {
       strokeWidth: 3,
       arrowheadSize: 15,
       curvature: arrowType === 'curved' ? 0.3 : 0.0,
-      layer: this.nextLayer++
+      layer: this.nextLayer++,
     });
-    
+
     this.elements.push(arrowElement);
     this.selectedElement = arrowElement;
     arrowElement.selected = true;
@@ -547,6 +561,116 @@ export class CanvasManager {
       this.saveToLocalStorage();
       return duplicatedElement;
     }
+    return null;
+  }
+
+  duplicateSelectedElement() {
+    if (!this.selectedElement) {
+      return null;
+    }
+
+    const originalElement = this.selectedElement;
+    let duplicatedElement = null;
+
+    // Calculate consistent offset positioning for all element types
+    const offsetX = 50; // Horizontal offset
+    const offsetY = 30; // Vertical offset
+
+    // Calculate new position with canvas boundary checks
+    const newX = Math.min(originalElement.x + offsetX, this.canvas.width - 100);
+    const newY = Math.min(originalElement.y + offsetY, this.canvas.height - 100);
+
+    // Handle different element types
+    if (originalElement.text !== undefined) {
+      // Text Element
+      duplicatedElement = new TextElement(newX, newY, originalElement.text, {
+        font: originalElement.font,
+        size: originalElement.size,
+        color: originalElement.color,
+        weight: originalElement.weight,
+        align: originalElement.align,
+        rotation: originalElement.rotation,
+        outlineWidth: originalElement.outlineWidth,
+        outlineColor: originalElement.outlineColor,
+        layer: this.nextLayer++,
+      });
+    } else if (originalElement.image) {
+      // Image Element
+      duplicatedElement = new ImageElement(newX, newY, originalElement.image, {
+        width: originalElement.width,
+        height: originalElement.height,
+        rotation: originalElement.rotation,
+        opacity: originalElement.opacity,
+        brightness: originalElement.brightness,
+        contrast: originalElement.contrast,
+        saturation: originalElement.saturation,
+        layer: this.nextLayer++,
+      });
+
+      // Copy crop settings if they exist
+      if (originalElement.cropX !== undefined) {
+        duplicatedElement.setCropArea(
+          originalElement.cropX,
+          originalElement.cropY,
+          originalElement.cropWidth,
+          originalElement.cropHeight
+        );
+      }
+    } else if (originalElement.shapeType !== undefined) {
+      // Shape Element
+      duplicatedElement = new ShapeElement(newX, newY, originalElement.shapeType, {
+        width: originalElement.width,
+        height: originalElement.height,
+        color: originalElement.color,
+        opacity: originalElement.opacity,
+        strokeWidth: originalElement.strokeWidth,
+        strokeColor: originalElement.strokeColor,
+        rotation: originalElement.rotation,
+        layer: this.nextLayer++,
+      });
+    } else if (originalElement.arrowType !== undefined) {
+      // Arrow Element
+      const deltaX = originalElement.x2 - originalElement.x;
+      const deltaY = originalElement.y2 - originalElement.y;
+
+      duplicatedElement = new ArrowElement(newX, newY, {
+        arrowType: originalElement.arrowType,
+        color: originalElement.color,
+        opacity: originalElement.opacity,
+        strokeWidth: originalElement.strokeWidth,
+        arrowheadSize: originalElement.arrowheadSize,
+        curvature: originalElement.curvature,
+        rotation: originalElement.rotation,
+        layer: this.nextLayer++,
+      });
+
+      // Set the end point to maintain the same arrow direction and length
+      duplicatedElement.x2 = newX + deltaX;
+      duplicatedElement.y2 = newY + deltaY;
+      duplicatedElement.updateBounds();
+    }
+
+    if (duplicatedElement) {
+      // Add the duplicated element to the canvas
+      this.elements.push(duplicatedElement);
+
+      // Deselect the original element
+      originalElement.selected = false;
+
+      // Select the new duplicated element
+      this.selectedElement = duplicatedElement;
+      duplicatedElement.selected = true;
+
+      // Trigger selection change callback to update UI controls
+      if (this.onSelectionChange) {
+        this.onSelectionChange(duplicatedElement);
+      }
+
+      this.redrawCanvas();
+      this.saveToLocalStorage();
+      return duplicatedElement;
+    }
+
     return null;
   }
 
@@ -775,10 +899,7 @@ export class CanvasManager {
           } else if (elementData.type === 'arrow') {
             console.log('Importing arrow:', elementData);
             const { type, ...elementProps } = elementData;
-            const arrowElement = Object.assign(
-              new ArrowElement(0, 0),
-              elementProps
-            );
+            const arrowElement = Object.assign(new ArrowElement(0, 0), elementProps);
             if (elementProps.rotation === undefined) {
               arrowElement.rotation = 0;
             }
@@ -808,7 +929,7 @@ export class CanvasManager {
 
       // Update nextLayer to be one higher than the highest existing layer
       if (this.elements.length > 0) {
-        const maxLayer = Math.max(...this.elements.map(el => el.layer || 0));
+        const maxLayer = Math.max(...this.elements.map((el) => el.layer || 0));
         this.nextLayer = maxLayer + 1;
       }
 
@@ -935,10 +1056,7 @@ export class CanvasManager {
             } else if (elementData.type === 'arrow') {
               console.log('Loading arrow from localStorage:', elementData);
               const { type, ...elementProps } = elementData;
-              const arrowElement = Object.assign(
-                new ArrowElement(0, 0),
-                elementProps
-              );
+              const arrowElement = Object.assign(new ArrowElement(0, 0), elementProps);
               if (elementProps.rotation === undefined) {
                 arrowElement.rotation = 0;
               }
@@ -966,7 +1084,7 @@ export class CanvasManager {
 
           // Update nextLayer to be one higher than the highest existing layer
           if (this.elements.length > 0) {
-            const maxLayer = Math.max(...this.elements.map(el => el.layer || 0));
+            const maxLayer = Math.max(...this.elements.map((el) => el.layer || 0));
             this.nextLayer = maxLayer + 1;
           }
 
@@ -994,8 +1112,8 @@ export class CanvasManager {
   bringToFront(element) {
     if (!element) element = this.selectedElement;
     if (!element) return false;
-    
-    const maxLayer = Math.max(...this.elements.map(el => el.layer));
+
+    const maxLayer = Math.max(...this.elements.map((el) => el.layer));
     element.layer = maxLayer + 1;
     this.redrawCanvas();
     this.saveToLocalStorage();
@@ -1005,8 +1123,8 @@ export class CanvasManager {
   sendToBack(element) {
     if (!element) element = this.selectedElement;
     if (!element) return false;
-    
-    const minLayer = Math.min(...this.elements.map(el => el.layer));
+
+    const minLayer = Math.min(...this.elements.map((el) => el.layer));
     element.layer = minLayer - 1;
     this.redrawCanvas();
     this.saveToLocalStorage();
@@ -1016,10 +1134,10 @@ export class CanvasManager {
   bringForward(element) {
     if (!element) element = this.selectedElement;
     if (!element) return false;
-    
+
     const sortedLayers = [...this.elements].sort((a, b) => a.layer - b.layer);
-    const currentIndex = sortedLayers.findIndex(el => el.id === element.id);
-    
+    const currentIndex = sortedLayers.findIndex((el) => el.id === element.id);
+
     if (currentIndex < sortedLayers.length - 1) {
       const nextElement = sortedLayers[currentIndex + 1];
       const temp = element.layer;
@@ -1035,10 +1153,10 @@ export class CanvasManager {
   sendBackward(element) {
     if (!element) element = this.selectedElement;
     if (!element) return false;
-    
+
     const sortedLayers = [...this.elements].sort((a, b) => a.layer - b.layer);
-    const currentIndex = sortedLayers.findIndex(el => el.id === element.id);
-    
+    const currentIndex = sortedLayers.findIndex((el) => el.id === element.id);
+
     if (currentIndex > 0) {
       const prevElement = sortedLayers[currentIndex - 1];
       const temp = element.layer;
@@ -1058,7 +1176,7 @@ export class CanvasManager {
   setElementLayer(element, layer) {
     if (!element) element = this.selectedElement;
     if (!element) return false;
-    
+
     element.layer = layer;
     this.redrawCanvas();
     this.saveToLocalStorage();

@@ -157,6 +157,13 @@ export class UIController {
     const deleteBtn = document.getElementById('delete-element');
     deleteBtn.addEventListener('click', () => {
       this.canvasManager.deleteSelectedElement();
+      this.updateLayersPanel();
+    });
+
+    const duplicateBtn = document.getElementById('duplicate-element');
+    duplicateBtn.addEventListener('click', () => {
+      this.canvasManager.duplicateSelectedElement();
+      this.updateLayersPanel();
     });
 
     const cycleElementsBtn = document.getElementById('cycle-elements');
@@ -238,12 +245,6 @@ export class UIController {
     textOutlineColor.addEventListener('change', (e) => {
       this.canvasManager.updateSelectedElement({ outlineColor: e.target.value });
     });
-
-    const duplicateTextBtn = document.getElementById('duplicate-text');
-    duplicateTextBtn.addEventListener('click', () => {
-      this.canvasManager.duplicateSelectedTextElement();
-      this.updateLayersPanel();
-    });
   }
 
   showTextControls() {
@@ -277,9 +278,11 @@ export class UIController {
 
   handleSelectionChange(selectedElement) {
     const deleteBtn = document.getElementById('delete-element');
+    const duplicateBtn = document.getElementById('duplicate-element');
 
     if (selectedElement) {
       deleteBtn.disabled = false;
+      duplicateBtn.disabled = false;
       this.showLayerControls();
 
       if (selectedElement.text !== undefined) {
@@ -309,13 +312,14 @@ export class UIController {
       }
     } else {
       deleteBtn.disabled = true;
+      duplicateBtn.disabled = true;
       this.hideLayerControls();
       this.hideTextControls();
       this.hideImageControls();
       this.hideShapeControls();
       this.hideArrowControls();
     }
-    
+
     this.updateLayersPanel();
   }
 
@@ -821,13 +825,14 @@ export class UIController {
       document.getElementById('shape-width').value = selectedElement.width;
       document.getElementById('shape-height').value = selectedElement.height;
       document.getElementById('shape-color').value = selectedElement.color;
-      
+
       const opacityValue = Math.round(selectedElement.opacity * 100);
       document.getElementById('shape-opacity').value = opacityValue;
       document.getElementById('shape-opacity-value').textContent = opacityValue + '%';
-      
+
       document.getElementById('shape-stroke-width').value = selectedElement.strokeWidth;
-      document.getElementById('shape-rotation').value = Math.round(selectedElement.rotation) || 0;
+      document.getElementById('shape-rotation').value =
+        Math.round(selectedElement.rotation) || 0;
     }
   }
 
@@ -836,19 +841,20 @@ export class UIController {
     if (selectedElement && selectedElement.arrowType !== undefined) {
       document.getElementById('arrow-type').value = selectedElement.arrowType;
       document.getElementById('arrow-color').value = selectedElement.color;
-      
+
       const opacityValue = Math.round(selectedElement.opacity * 100);
       document.getElementById('arrow-opacity').value = opacityValue;
       document.getElementById('arrow-opacity-value').textContent = opacityValue + '%';
-      
+
       document.getElementById('arrow-stroke-width').value = selectedElement.strokeWidth;
       document.getElementById('arrow-head-size').value = selectedElement.arrowheadSize;
-      
+
       const curvatureValue = Math.round(selectedElement.curvature * 100);
       const sign = curvatureValue >= 0 ? '+' : '';
       document.getElementById('arrow-curvature').value = curvatureValue;
-      document.getElementById('arrow-curvature-value').textContent = sign + curvatureValue + '%';
-      
+      document.getElementById('arrow-curvature-value').textContent =
+        sign + curvatureValue + '%';
+
       this.updateArrowCurvatureVisibility(selectedElement.arrowType);
     }
   }
@@ -930,7 +936,8 @@ export class UIController {
 
       if (element.text !== undefined) {
         elementType = 'Text';
-        elementInfo = element.text.length > 15 ? element.text.substring(0, 15) + '...' : element.text;
+        elementInfo =
+          element.text.length > 15 ? element.text.substring(0, 15) + '...' : element.text;
       } else if (element.image) {
         elementType = 'Image';
         elementInfo = `${element.width}×${element.height}`;
@@ -953,7 +960,7 @@ export class UIController {
       // Click to select element
       layerItem.addEventListener('click', () => {
         this.canvasManager.selectedElement = element;
-        this.canvasManager.elements.forEach(el => el.selected = false);
+        this.canvasManager.elements.forEach((el) => (el.selected = false));
         element.selected = true;
         this.canvasManager.redrawCanvas();
         if (this.canvasManager.onSelectionChange) {
@@ -989,6 +996,15 @@ export class UIController {
         e.preventDefault();
         this.canvasManager.cycleToNextElement();
         this.updateLayersPanel();
+      }
+
+      // Ctrl+D key to duplicate selected element
+      if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (this.canvasManager.selectedElement) {
+          this.canvasManager.duplicateSelectedElement();
+          this.updateLayersPanel();
+        }
       }
 
       // Escape key to deselect or cancel crop
