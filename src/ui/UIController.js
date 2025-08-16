@@ -13,15 +13,8 @@ export class UIController {
       this.updateColorPalette(e.target.value);
     });
 
-    const paletteColors = document.querySelectorAll('.palette-color');
-    paletteColors.forEach((colorElement) => {
-      colorElement.addEventListener('click', (e) => {
-        const color = e.target.getAttribute('data-color');
-        this.canvasManager.setBackgroundColor(color);
-        bgColorInput.value = color;
-        this.updateColorPalette(color);
-      });
-    });
+    // Add event listeners for background color palette
+    this.addBackgroundColorPaletteListeners();
 
     const patternButtons = document.querySelectorAll('.pattern-btn');
     patternButtons.forEach((button) => {
@@ -247,14 +240,108 @@ export class UIController {
     });
   }
 
+  createElementColorPalette(type = 'element') {
+    const colorPalette = document.createElement('div');
+    colorPalette.className =
+      type === 'background' ? 'color-palette' : 'element-color-palette';
+
+    const title = document.createElement('h4');
+    title.textContent = 'Quick Colors';
+    colorPalette.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'palette-grid';
+
+    // Same colors as background palette
+    const colors = [
+      '#ff4444',
+      '#ff6b35',
+      '#ffb347',
+      '#ffd700',
+      '#00d4aa',
+      '#00bfff',
+      '#7b68ee',
+      '#ff1493',
+      '#32cd32',
+      '#9932cc',
+      '#1a1a1a',
+      '#ffffff',
+    ];
+
+    colors.forEach((color) => {
+      const colorElement = document.createElement('div');
+      colorElement.className = 'palette-color';
+      colorElement.setAttribute('data-color', color);
+      colorElement.style.backgroundColor = color;
+      grid.appendChild(colorElement);
+    });
+
+    colorPalette.appendChild(grid);
+    return colorPalette;
+  }
+
+  addColorPaletteToControl(controlId) {
+    const controlElement = document.getElementById(controlId);
+    if (!controlElement) return;
+
+    // Check if palette already exists
+    if (controlElement.querySelector('.element-color-palette')) return;
+
+    // Find the color input control group
+    const colorInput = controlElement.querySelector('input[type="color"]');
+    if (!colorInput) return;
+
+    // Find the parent control group of the color input
+    const colorControlGroup = colorInput.closest('.control-group');
+    if (!colorControlGroup) return;
+
+    // Create and insert the color palette after the color control group
+    const colorPalette = this.createElementColorPalette();
+    colorControlGroup.parentNode.insertBefore(
+      colorPalette,
+      colorControlGroup.nextSibling
+    );
+
+    // Add event listeners to the palette colors
+    this.addColorPaletteListeners(colorPalette, colorInput, controlId);
+  }
+
+  addColorPaletteListeners(colorPalette, colorInput, controlId) {
+    const paletteColors = colorPalette.querySelectorAll('.palette-color');
+    paletteColors.forEach((colorElement) => {
+      colorElement.addEventListener('click', (e) => {
+        const color = e.target.getAttribute('data-color');
+        if (color) {
+          // Update the color input
+          colorInput.value = color;
+
+          // Update the selected element
+          if (controlId === 'text-controls') {
+            this.canvasManager.updateSelectedElement({ color: color });
+          } else if (controlId === 'shape-controls') {
+            this.canvasManager.updateSelectedElement({ color: color });
+          } else if (controlId === 'arrow-controls') {
+            this.canvasManager.updateSelectedElement({ color: color });
+          }
+        }
+      });
+    });
+  }
+
   showTextControls() {
     const textControls = document.getElementById('text-controls');
     textControls.style.display = 'block';
+    this.addColorPaletteToControl('text-controls');
   }
 
   hideTextControls() {
     const textControls = document.getElementById('text-controls');
     textControls.style.display = 'none';
+    // Remove color palette when hiding
+    const colorPalette = textControls.querySelector('.element-color-palette');
+    if (colorPalette) {
+      colorPalette.remove();
+    }
   }
 
   updateTextControls() {
@@ -481,6 +568,28 @@ export class UIController {
     rotationInput.addEventListener('input', (e) => {
       let rotation = parseInt(e.target.value) || 0;
       this.canvasManager.updateSelectedElement({ rotation: rotation });
+    });
+  }
+
+  addBackgroundColorPaletteListeners() {
+    const bgColorInput = document.getElementById('bg-color');
+    if (!bgColorInput) return;
+
+    // Find the background color palette
+    const bgPalette = document.querySelector('.color-palette');
+    if (!bgPalette) return;
+
+    // Add event listeners to the background palette colors
+    const paletteColors = bgPalette.querySelectorAll('.palette-color');
+    paletteColors.forEach((colorElement) => {
+      colorElement.addEventListener('click', (e) => {
+        const color = e.target.getAttribute('data-color');
+        if (color) {
+          this.canvasManager.setBackgroundColor(color);
+          bgColorInput.value = color;
+          this.updateColorPalette(color);
+        }
+      });
     });
   }
 
@@ -792,21 +901,33 @@ export class UIController {
   showShapeControls() {
     const shapeControls = document.getElementById('shape-controls');
     shapeControls.style.display = 'block';
+    this.addColorPaletteToControl('shape-controls');
   }
 
   hideShapeControls() {
     const shapeControls = document.getElementById('shape-controls');
     shapeControls.style.display = 'none';
+    // Remove color palette when hiding
+    const colorPalette = shapeControls.querySelector('.element-color-palette');
+    if (colorPalette) {
+      colorPalette.remove();
+    }
   }
 
   showArrowControls() {
     const arrowControls = document.getElementById('arrow-controls');
     arrowControls.style.display = 'block';
+    this.addColorPaletteToControl('arrow-controls');
   }
 
   hideArrowControls() {
     const arrowControls = document.getElementById('arrow-controls');
     arrowControls.style.display = 'none';
+    // Remove color palette when hiding
+    const colorPalette = arrowControls.querySelector('.element-color-palette');
+    if (colorPalette) {
+      colorPalette.remove();
+    }
   }
 
   updateArrowCurvatureVisibility(arrowType) {

@@ -213,7 +213,18 @@ header h1 {
 }
 
 .color-palette {
-    margin-top: 15px;
+  margin-top: 15px;
+}
+
+.element-color-palette {
+  margin-top: 15px;
+}
+
+.element-color-palette h4 {
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+  color: #333;
+  font-weight: 500;
 }
 
 .color-palette h4,
