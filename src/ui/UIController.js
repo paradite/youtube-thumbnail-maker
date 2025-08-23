@@ -569,6 +569,23 @@ export class UIController {
       let rotation = parseInt(e.target.value) || 0;
       this.canvasManager.updateSelectedElement({ rotation: rotation });
     });
+
+    // Outline controls
+    const outlineWidthInput = document.getElementById('image-outline-width');
+    const outlineColorInput = document.getElementById('image-outline-color');
+
+    if (outlineWidthInput) {
+      outlineWidthInput.addEventListener('input', (e) => {
+        const width = Math.max(0, parseInt(e.target.value) || 0);
+        this.canvasManager.updateSelectedElement({ outlineWidth: width });
+      });
+    }
+
+    if (outlineColorInput) {
+      outlineColorInput.addEventListener('change', (e) => {
+        this.canvasManager.updateSelectedElement({ outlineColor: e.target.value });
+      });
+    }
   }
 
   addBackgroundColorPaletteListeners() {
@@ -596,11 +613,27 @@ export class UIController {
   showImageControls() {
     const imageControls = document.getElementById('image-controls');
     imageControls.style.display = 'block';
+    this.showOutlineControls();
   }
 
   hideImageControls() {
     const imageControls = document.getElementById('image-controls');
     imageControls.style.display = 'none';
+    this.hideOutlineControls();
+  }
+
+  showOutlineControls() {
+    const outlineControls = document.querySelector('.outline-controls');
+    if (outlineControls) {
+      outlineControls.style.display = 'block';
+    }
+  }
+
+  hideOutlineControls() {
+    const outlineControls = document.querySelector('.outline-controls');
+    if (outlineControls) {
+      outlineControls.style.display = 'none';
+    }
   }
 
   updateImageControls() {
@@ -629,6 +662,12 @@ export class UIController {
       // Update rotation control
       document.getElementById('image-rotation').value =
         Math.round(selectedElement.rotation) || 0;
+
+      // Update outline controls
+      document.getElementById('image-outline-width').value =
+        Math.round(selectedElement.outlineWidth) || 0;
+      document.getElementById('image-outline-color').value =
+        selectedElement.outlineColor || '#000000';
     }
   }
 
@@ -725,7 +764,9 @@ export class UIController {
         // Create new image element with the masked person
         const personElementX = selectedElement.x + 50;
         const personElementY = selectedElement.y + 50;
-        this.canvasManager.addImageElement(maskedImage, personElementX, personElementY);
+        this.canvasManager.addImageElement(maskedImage, personElementX, personElementY, {
+          isPersonSegment: true,
+        });
         this.updateLayersPanel();
 
         alert('Person extracted successfully with transparent background!');

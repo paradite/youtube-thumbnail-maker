@@ -379,7 +379,7 @@ export class CanvasManager {
     return textElement;
   }
 
-  addImageElement(image, x = 100, y = 100) {
+  addImageElement(image, x = 100, y = 100, options = {}) {
     // Scale image to fit within reasonable bounds while maintaining aspect ratio
     const maxWidth = this.canvas.width * 0.4; // Max 40% of canvas width
     const maxHeight = this.canvas.height * 0.4; // Max 40% of canvas height
@@ -398,6 +398,7 @@ export class CanvasManager {
       width,
       height,
       layer: this.nextLayer++,
+      ...options, // Include any additional options
     });
     this.elements.push(imageElement);
     this.selectedElement = imageElement;
