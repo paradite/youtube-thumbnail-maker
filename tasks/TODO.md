@@ -9,3 +9,5 @@ Add a feature to allow the user to add outline or border to images. This should 
 ```
 
 Task 3: Improve cropping feature (directly manipulate the crop area on the canvas)
+
+Task 4: Add more fine-grained control for parameters in Person Segmentation feature.
