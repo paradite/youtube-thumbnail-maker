@@ -29,10 +29,6 @@ export class ImageElement {
     this.contrast = options.contrast !== undefined ? options.contrast : 100;
     this.saturation = options.saturation !== undefined ? options.saturation : 100;
 
-    // Outline properties
-    this.outlineWidth = options.outlineWidth !== undefined ? options.outlineWidth : 0;
-    this.outlineColor = options.outlineColor || '#000000';
-    this.isPersonSegment = options.isPersonSegment || false;
   }
 
   render(ctx) {
@@ -89,10 +85,6 @@ export class ImageElement {
 
     ctx.restore();
 
-    // Render outline if outline width is greater than 0
-    if (this.outlineWidth > 0) {
-      this.renderOutline(ctx);
-    }
 
     if (this.selected) {
       this.renderSelection(ctx);
@@ -287,109 +279,9 @@ export class ImageElement {
     if (options.brightness !== undefined) this.brightness = options.brightness;
     if (options.contrast !== undefined) this.contrast = options.contrast;
     if (options.saturation !== undefined) this.saturation = options.saturation;
-    if (options.outlineWidth !== undefined) this.outlineWidth = options.outlineWidth;
-    if (options.outlineColor !== undefined) this.outlineColor = options.outlineColor;
-    if (options.isPersonSegment !== undefined)
-      this.isPersonSegment = options.isPersonSegment;
     if (options.layer !== undefined) this.layer = options.layer;
   }
 
-  // Render outline around the image
-  renderOutline(ctx) {
-    ctx.save();
-
-    // Apply rotation transformation if needed
-    if (this.rotation !== 0) {
-      ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
-      ctx.rotate((this.rotation * Math.PI) / 180);
-    }
-
-    ctx.strokeStyle = this.outlineColor;
-    ctx.lineWidth = this.outlineWidth;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-
-    if (this.isPersonSegment) {
-      // For segmented person images, create outline around non-transparent pixels
-      this.renderPersonOutline(ctx);
-    } else {
-      // For regular images, draw rectangular outline
-      const rectX = this.rotation !== 0 ? -this.width / 2 : this.x;
-      const rectY = this.rotation !== 0 ? -this.height / 2 : this.y;
-      const rectWidth = this.width;
-      const rectHeight = this.height;
-
-      ctx.strokeRect(rectX, rectY, rectWidth, rectHeight);
-    }
-
-    ctx.restore();
-  }
-
-  // Render outline around person silhouette for segmented images
-  renderPersonOutline(ctx) {
-    // Create a temporary canvas to analyze the image
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = this.image.width;
-    tempCanvas.height = this.image.height;
-
-    // Draw the cropped image to the temp canvas
-    tempCtx.drawImage(
-      this.image,
-      this.cropX,
-      this.cropY,
-      this.cropWidth,
-      this.cropHeight,
-      0,
-      0,
-      this.image.width,
-      this.image.height
-    );
-
-    // Get image data to analyze transparency
-    const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-    const data = imageData.data;
-
-    // Create a path around non-transparent pixels
-    const path = new Path2D();
-    const threshold = 10; // Alpha threshold for transparency
-
-    // Scale factors for mapping original image coordinates to display coordinates
-    const scaleX = this.width / this.cropWidth;
-    const scaleY = this.height / this.cropHeight;
-
-    // Offset for positioning
-    const offsetX = this.rotation !== 0 ? -this.width / 2 : this.x;
-    const offsetY = this.rotation !== 0 ? -this.height / 2 : this.y;
-
-    let foundFirstPixel = false;
-
-    // Scan the image data to find non-transparent pixels and create outline
-    for (let y = 0; y < tempCanvas.height; y++) {
-      for (let x = 0; x < tempCanvas.width; x++) {
-        const alpha = data[(y * tempCanvas.width + x) * 4 + 3];
-
-        if (alpha > threshold) {
-          // This pixel is not transparent
-          const displayX = offsetX + x * scaleX;
-          const displayY = offsetY + y * scaleY;
-
-          if (!foundFirstPixel) {
-            path.moveTo(displayX, displayY);
-            foundFirstPixel = true;
-          } else {
-            path.lineTo(displayX, displayY);
-          }
-        } else if (foundFirstPixel) {
-          // End current path segment and start a new one
-          path.moveTo(offsetX + x * scaleX, offsetY + y * scaleY);
-        }
-      }
-    }
-
-    // Stroke the path to create the outline
-    ctx.stroke(path);
-  }
 
   // Scale the image while maintaining aspect ratio
   scale(factor) {
