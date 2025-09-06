@@ -130,7 +130,8 @@ export class ImageElement {
     ctx.restore();
 
 
-    if (this.selected) {
+    // Render standard selection handles unless in crop mode
+    if (this.selected && !this.cropMode) {
       this.renderSelection(ctx);
     }
 
@@ -438,6 +439,53 @@ export class ImageElement {
     ctx.strokeRect(this.x, this.y, this.width, this.height);
     ctx.setLineDash([]);
     ctx.restore();
+
+    // Draw crop handles and record their hit areas for interaction
+    this.renderCropHandles(ctx);
+  }
+
+  renderCropHandles(ctx) {
+    const handleSize = 8;
+    const half = handleSize / 2;
+    const x = this.x;
+    const y = this.y;
+    const w = this.width;
+    const h = this.height;
+
+    const handles = [
+      { x: x - half, y: y - half, type: 'nw' },
+      { x: x + w / 2 - half, y: y - half, type: 'n' },
+      { x: x + w - half, y: y - half, type: 'ne' },
+      { x: x - half, y: y + h / 2 - half, type: 'w' },
+      { x: x + w - half, y: y + h / 2 - half, type: 'e' },
+      { x: x - half, y: y + h - half, type: 'sw' },
+      { x: x + w / 2 - half, y: y + h - half, type: 's' },
+      { x: x + w - half, y: y + h - half, type: 'se' },
+    ];
+
+    ctx.save();
+    ctx.fillStyle = '#00ff00';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    handles.forEach((h) => {
+      ctx.fillRect(h.x, h.y, handleSize, handleSize);
+      ctx.strokeRect(h.x, h.y, handleSize, handleSize);
+    });
+    ctx.restore();
+
+    // Store for hit testing during crop mode (non-rotated only)
+    this._cropHandles = handles.map((h) => ({ x: h.x, y: h.y, type: h.type, size: handleSize }));
+  }
+
+  // Return handle type if point hits a crop handle; otherwise null
+  isPointInCropHandle(x, y) {
+    if (!this.cropMode || this.rotation !== 0 || !this._cropHandles) return null;
+    for (const h of this._cropHandles) {
+      if (x >= h.x && x <= h.x + h.size && y >= h.y && y <= h.y + h.size) {
+        return h.type;
+      }
+    }
+    return null;
   }
 
   _invalidateOutlineCaches() {

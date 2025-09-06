@@ -21,7 +21,12 @@ export class CanvasManager {
     this.isRotating = false;
     this.initialRotation = 0;
     this.rotationCenter = { x: 0, y: 0 };
+    // Crop interaction state
+    this.isCropping = false;
+    this.cropHandle = null;
+    this.cropInitial = null;
     this.onSelectionChange = null;
+    this.onCropChange = null;
     this.nextLayer = 1;
 
     this.backgroundRenderer = new BackgroundRenderer(this.canvas, this.ctx);
@@ -56,6 +61,78 @@ export class CanvasManager {
     const rect = this.canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) * (this.canvas.width / rect.width);
     const y = (e.clientY - rect.top) * (this.canvas.height / rect.height);
+
+    // If currently in image crop mode on the selected element, prioritize crop interactions
+    const prevSelected = this.selectedElement;
+    if (
+      prevSelected &&
+      prevSelected.image &&
+      prevSelected.cropMode &&
+      prevSelected.rotation === 0
+    ) {
+      const cropHandle = prevSelected.isPointInCropHandle
+        ? prevSelected.isPointInCropHandle(x, y)
+        : null;
+      if (cropHandle) {
+        // Start crop resize interaction
+        this.isCropping = true;
+        this.cropHandle = cropHandle;
+        this.initialMousePos = { x, y };
+        // Compute safe fixed scale at drag start
+        const _sx = prevSelected.cropWidth
+          ? prevSelected.width / Math.max(1, prevSelected.cropWidth)
+          : prevSelected.width;
+        const _sy = prevSelected.cropHeight
+          ? prevSelected.height / Math.max(1, prevSelected.cropHeight)
+          : prevSelected.height;
+        const _safeScaleX = Number.isFinite(_sx) && _sx > 0 ? _sx : 1;
+        const _safeScaleY = Number.isFinite(_sy) && _sy > 0 ? _sy : 1;
+
+        this.cropInitial = {
+          x: prevSelected.cropX,
+          y: prevSelected.cropY,
+          w: prevSelected.cropWidth,
+          h: prevSelected.cropHeight,
+          // Capture display rect to anchor opposite edges
+          dispX: prevSelected.x,
+          dispY: prevSelected.y,
+          dispW: prevSelected.width,
+          dispH: prevSelected.height,
+          scaleX: _safeScaleX,
+          scaleY: _safeScaleY,
+        };
+        return; // Do not alter selection/dragging state
+      }
+      // Inside the displayed crop area -> move/pan crop window instead of moving element
+      if (prevSelected.isPointInside && prevSelected.isPointInside(x, y, this.ctx)) {
+        this.isCropping = true;
+        this.cropHandle = 'move';
+        this.initialMousePos = { x, y };
+        // Compute safe fixed scale at drag start
+        const _sx2 = prevSelected.cropWidth
+          ? prevSelected.width / Math.max(1, prevSelected.cropWidth)
+          : prevSelected.width;
+        const _sy2 = prevSelected.cropHeight
+          ? prevSelected.height / Math.max(1, prevSelected.cropHeight)
+          : prevSelected.height;
+        const _safeScaleX2 = Number.isFinite(_sx2) && _sx2 > 0 ? _sx2 : 1;
+        const _safeScaleY2 = Number.isFinite(_sy2) && _sy2 > 0 ? _sy2 : 1;
+
+        this.cropInitial = {
+          x: prevSelected.cropX,
+          y: prevSelected.cropY,
+          w: prevSelected.cropWidth,
+          h: prevSelected.cropHeight,
+          dispX: prevSelected.x,
+          dispY: prevSelected.y,
+          dispW: prevSelected.width,
+          dispH: prevSelected.height,
+          scaleX: _safeScaleX2,
+          scaleY: _safeScaleY2,
+        };
+        return; // Prevent normal drag of element while cropping
+      }
+    }
 
     this.selectedElement = null;
     this.isResizing = false;
@@ -141,6 +218,176 @@ export class CanvasManager {
     const x = (e.clientX - rect.left) * (this.canvas.width / rect.width);
     const y = (e.clientY - rect.top) * (this.canvas.height / rect.height);
 
+    // Active cropping interaction
+    if (
+      this.isCropping &&
+      this.selectedElement &&
+      this.selectedElement.image &&
+      this.selectedElement.cropMode &&
+      this.selectedElement.rotation === 0
+    ) {
+      const el = this.selectedElement;
+      const deltaX = x - this.initialMousePos.x;
+      const deltaY = y - this.initialMousePos.y;
+
+      // Constants captured at drag start
+      const ci = this.cropInitial;
+      let scaleX = ci.scaleX;
+      let scaleY = ci.scaleY;
+      if (!Number.isFinite(scaleX) || scaleX <= 0) {
+        const sxNow = el.width / Math.max(1, el.cropWidth || 1);
+        scaleX = Number.isFinite(sxNow) && sxNow > 0 ? sxNow : 1;
+      }
+      if (!Number.isFinite(scaleY) || scaleY <= 0) {
+        const syNow = el.height / Math.max(1, el.cropHeight || 1);
+        scaleY = Number.isFinite(syNow) && syNow > 0 ? syNow : 1;
+      }
+      const origW = el.originalWidth;
+      const origH = el.originalHeight;
+
+      const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+
+      // Prepare new display rect starting from initial
+      let dispX = ci.dispX;
+      let dispY = ci.dispY;
+      let dispW = ci.dispW;
+      let dispH = ci.dispH;
+
+      // Prepare new crop area starting from initial
+      let cropX = ci.x;
+      let cropY = ci.y;
+      let cropW = ci.w;
+      let cropH = ci.h;
+
+      // Helpers for anchoring
+      const right0 = ci.dispX + ci.dispW;
+      const bottom0 = ci.dispY + ci.dispH;
+
+      switch (this.cropHandle) {
+        case 'move': {
+          cropX = clamp(ci.x + deltaX / scaleX, 0, origW - ci.w);
+          cropY = clamp(ci.y + deltaY / scaleY, 0, origH - ci.h);
+          break;
+        }
+        case 'e': {
+          dispW = Math.max(1, ci.dispW + deltaX);
+          cropW = dispW / scaleX;
+          cropW = clamp(cropW, 1, origW - ci.x);
+          dispW = cropW * scaleX;
+          dispX = ci.dispX;
+          cropX = ci.x;
+          break;
+        }
+        case 's': {
+          dispH = Math.max(1, ci.dispH + deltaY);
+          cropH = dispH / scaleY;
+          cropH = clamp(cropH, 1, origH - ci.y);
+          dispH = cropH * scaleY;
+          dispY = ci.dispY;
+          cropY = ci.y;
+          break;
+        }
+        case 'w': {
+          dispW = Math.max(1, ci.dispW - deltaX);
+          cropW = dispW / scaleX;
+          cropW = clamp(cropW, 1, ci.x + ci.w);
+          dispW = cropW * scaleX;
+          dispX = right0 - dispW;
+          cropX = ci.x + ci.w - cropW;
+          cropX = clamp(cropX, 0, origW - 1);
+          break;
+        }
+        case 'n': {
+          dispH = Math.max(1, ci.dispH - deltaY);
+          cropH = dispH / scaleY;
+          cropH = clamp(cropH, 1, ci.y + ci.h);
+          dispH = cropH * scaleY;
+          dispY = bottom0 - dispH;
+          cropY = ci.y + ci.h - cropH;
+          cropY = clamp(cropY, 0, origH - 1);
+          break;
+        }
+        case 'ne': {
+          dispW = Math.max(1, ci.dispW + deltaX);
+          cropW = dispW / scaleX;
+          cropW = clamp(cropW, 1, origW - ci.x);
+          dispW = cropW * scaleX;
+          dispX = ci.dispX;
+          cropX = ci.x;
+
+          dispH = Math.max(1, ci.dispH - deltaY);
+          cropH = dispH / scaleY;
+          cropH = clamp(cropH, 1, ci.y + ci.h);
+          dispH = cropH * scaleY;
+          dispY = bottom0 - dispH;
+          cropY = ci.y + ci.h - cropH;
+          cropY = clamp(cropY, 0, origH - 1);
+          break;
+        }
+        case 'nw': {
+          dispW = Math.max(1, ci.dispW - deltaX);
+          cropW = dispW / scaleX;
+          cropW = clamp(cropW, 1, ci.x + ci.w);
+          dispW = cropW * scaleX;
+          dispX = right0 - dispW;
+          cropX = ci.x + ci.w - cropW;
+          cropX = clamp(cropX, 0, origW - 1);
+
+          dispH = Math.max(1, ci.dispH - deltaY);
+          cropH = dispH / scaleY;
+          cropH = clamp(cropH, 1, ci.y + ci.h);
+          dispH = cropH * scaleY;
+          dispY = bottom0 - dispH;
+          cropY = ci.y + ci.h - cropH;
+          cropY = clamp(cropY, 0, origH - 1);
+          break;
+        }
+        case 'se': {
+          dispW = Math.max(1, ci.dispW + deltaX);
+          cropW = dispW / scaleX;
+          cropW = clamp(cropW, 1, origW - ci.x);
+          dispW = cropW * scaleX;
+          dispX = ci.dispX;
+          cropX = ci.x;
+
+          dispH = Math.max(1, ci.dispH + deltaY);
+          cropH = dispH / scaleY;
+          cropH = clamp(cropH, 1, origH - ci.y);
+          dispH = cropH * scaleY;
+          dispY = ci.dispY;
+          cropY = ci.y;
+          break;
+        }
+        case 'sw': {
+          dispW = Math.max(1, ci.dispW - deltaX);
+          cropW = dispW / scaleX;
+          cropW = clamp(cropW, 1, ci.x + ci.w);
+          dispW = cropW * scaleX;
+          dispX = right0 - dispW;
+          cropX = ci.x + ci.w - cropW;
+          cropX = clamp(cropX, 0, origW - 1);
+
+          dispH = Math.max(1, ci.dispH + deltaY);
+          cropH = dispH / scaleY;
+          cropH = clamp(cropH, 1, origH - ci.y);
+          dispH = cropH * scaleY;
+          dispY = ci.dispY;
+          cropY = ci.y;
+          break;
+        }
+      }
+
+      // Commit display rect and crop area keeping scale constant
+      el.x = Math.round(dispX);
+      el.y = Math.round(dispY);
+      el.width = dispW;
+      el.height = dispH;
+
+      el.setCropArea(Math.round(cropX), Math.round(cropY), Math.round(cropW), Math.round(cropH));
+      this.redrawCanvas();
+      if (this.onCropChange) this.onCropChange(el);
+      return;
+    }
     if (this.isRotating && this.selectedElement) {
       this.canvas.style.cursor = 'grab';
       const centerX = this.rotationCenter.x;
@@ -256,6 +503,35 @@ export class CanvasManager {
   updateCursor(x, y) {
     let cursor = 'default';
 
+    // Crop mode cursor updates for selected image elements
+    if (
+      this.selectedElement &&
+      this.selectedElement.image &&
+      this.selectedElement.cropMode &&
+      this.selectedElement.rotation === 0
+    ) {
+      const el = this.selectedElement;
+      let handle = el.isPointInCropHandle ? el.isPointInCropHandle(x, y) : null;
+      if (handle) {
+        // Map handle to appropriate cursor
+        const map = {
+          n: 'ns-resize',
+          s: 'ns-resize',
+          e: 'ew-resize',
+          w: 'ew-resize',
+          ne: 'nesw-resize',
+          sw: 'nesw-resize',
+          nw: 'nwse-resize',
+          se: 'nwse-resize',
+        };
+        cursor = map[handle] || 'crosshair';
+      } else if (el.isPointInside && el.isPointInside(x, y, this.ctx)) {
+        cursor = 'move';
+      }
+      this.canvas.style.cursor = cursor;
+      return;
+    }
+
     // Sort elements by layer in reverse order for hit testing (top layers first)
     const sortedElements = [...this.elements].sort((a, b) => b.layer - a.layer);
     for (let i = 0; i < sortedElements.length; i++) {
@@ -283,12 +559,13 @@ export class CanvasManager {
   }
 
   handleMouseUp(e) {
-    if (this.isDragging || this.isResizing || this.isRotating) {
+    if (this.isDragging || this.isResizing || this.isRotating || this.isCropping) {
       this.saveToLocalStorage();
     }
     this.isDragging = false;
     this.isResizing = false;
     this.isRotating = false;
+    this.isCropping = false;
     this.resizeHandle = null;
 
     const rect = this.canvas.getBoundingClientRect();

@@ -3,6 +3,20 @@ export class UIController {
     this.canvasManager = canvasManager;
     this.canvasManager.onSelectionChange = this.handleSelectionChange.bind(this);
     this.canvasManager.onUIUpdate = this.updateUIFromLoadedData.bind(this);
+    // Keep crop input values in sync while interacting on canvas
+    this.canvasManager.onCropChange = (el) => {
+      const cx = document.getElementById('crop-x');
+      const cy = document.getElementById('crop-y');
+      const cw = document.getElementById('crop-width');
+      const ch = document.getElementById('crop-height');
+      if (cx && cy && cw && ch) {
+        const isF = Number.isFinite;
+        if (isF(el.cropX)) cx.value = String(Math.round(el.cropX));
+        if (isF(el.cropY)) cy.value = String(Math.round(el.cropY));
+        if (isF(el.cropWidth)) cw.value = String(Math.round(el.cropWidth));
+        if (isF(el.cropHeight)) ch.value = String(Math.round(el.cropHeight));
+      }
+    };
     this.setupEventListeners();
   }
 
@@ -707,20 +721,39 @@ export class UIController {
     const cropControls = document.getElementById('crop-controls');
     cropControls.style.display = 'block';
 
-    // Initialize crop area with current image dimensions
-    document.getElementById('crop-x').value = 0;
-    document.getElementById('crop-y').value = 0;
-    document.getElementById('crop-width').value = selectedElement.originalWidth;
-    document.getElementById('crop-height').value = selectedElement.originalHeight;
+    // Initialize crop inputs with current crop state
+    document.getElementById('crop-x').value = Math.round(selectedElement.cropX || 0);
+    document.getElementById('crop-y').value = Math.round(selectedElement.cropY || 0);
+    document.getElementById('crop-width').value = Math.round(
+      selectedElement.cropWidth || selectedElement.originalWidth
+    );
+    document.getElementById('crop-height').value = Math.round(
+      selectedElement.cropHeight || selectedElement.originalHeight
+    );
 
     // Enable crop mode
     selectedElement.cropMode = true;
+    // Backup original state for cancel
+    this.canvasManager._cropBackup = {
+      x: selectedElement.x,
+      y: selectedElement.y,
+      width: selectedElement.width,
+      height: selectedElement.height,
+      cropX: selectedElement.cropX,
+      cropY: selectedElement.cropY,
+      cropWidth: selectedElement.cropWidth,
+      cropHeight: selectedElement.cropHeight,
+    };
     this.canvasManager.redrawCanvas();
   }
 
   applyCrop() {
     const selectedElement = this.canvasManager.selectedElement;
     if (!selectedElement || selectedElement.text !== undefined) return;
+
+    // Preserve current display scale to avoid zooming
+    const scaleXBefore = selectedElement.width / selectedElement.cropWidth;
+    const scaleYBefore = selectedElement.height / selectedElement.cropHeight;
 
     const cropX = parseInt(document.getElementById('crop-x').value) || 0;
     const cropY = parseInt(document.getElementById('crop-y').value) || 0;
@@ -745,6 +778,11 @@ export class UIController {
     }
 
     selectedElement.setCropArea(cropX, cropY, cropWidth, cropHeight);
+    // Adjust displayed size to keep scale constant
+    selectedElement.width = Math.max(1, Math.round(scaleXBefore * selectedElement.cropWidth));
+    selectedElement.height = Math.max(1, Math.round(scaleYBefore * selectedElement.cropHeight));
+    // Clear crop backup after apply
+    this.canvasManager._cropBackup = null;
     this.cancelCrop();
   }
 
@@ -752,6 +790,21 @@ export class UIController {
     const selectedElement = this.canvasManager.selectedElement;
     if (selectedElement) {
       selectedElement.cropMode = false;
+      // Restore original state if a crop drag changed it
+      const backup = this.canvasManager._cropBackup;
+      if (backup) {
+        selectedElement.x = backup.x;
+        selectedElement.y = backup.y;
+        selectedElement.width = backup.width;
+        selectedElement.height = backup.height;
+        selectedElement.setCropArea(
+          backup.cropX,
+          backup.cropY,
+          backup.cropWidth,
+          backup.cropHeight
+        );
+        this.canvasManager._cropBackup = null;
+      }
     }
 
     const cropControls = document.getElementById('crop-controls');
