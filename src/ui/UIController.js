@@ -44,10 +44,17 @@ export class UIController {
       if (e.target.files && e.target.files[0]) {
         const file = e.target.files[0];
 
-        // Validate file type
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-          alert('Please select a valid image file (JPG, PNG, or WebP)');
+        // Validate file type (add SVG)
+        const validTypes = [
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/webp',
+          'image/svg+xml',
+        ];
+        const isSvg = file.type === 'image/svg+xml' || /\.svgz?$/i.test(file.name);
+        if (!(validTypes.includes(file.type) || isSvg)) {
+          alert('Please select a valid image file (JPG, PNG, WebP, or SVG)');
           return;
         }
 
@@ -61,27 +68,64 @@ export class UIController {
         console.log('Processing image:', file.name);
 
         const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new Image();
-          img.onload = () => {
-            console.log('Image loaded:', img.width + 'x' + img.height);
-            this.canvasManager.addImageElement(img);
-            this.updateLayersPanel();
 
-            // Clear the file input so the same file can be selected again
+        // For SVG, read as text and convert to a data URL to avoid MIME issues
+        if (isSvg) {
+          reader.onload = (event) => {
+            try {
+              const svgText = event.target.result;
+              // Build data URL. Use base64 to preserve special characters safely.
+              const base64 = btoa(unescape(encodeURIComponent(svgText)));
+              const dataUrl = `data:image/svg+xml;base64,${base64}`;
+
+              const img = new Image();
+              img.onload = () => {
+                console.log('SVG loaded:', img.naturalWidth + 'x' + img.naturalHeight);
+                // Add as standard image element (SVG source supported by canvas)
+                this.canvasManager.addImageElement(img);
+                this.updateLayersPanel();
+                imageUpload.value = '';
+              };
+              img.onerror = () => {
+                alert('Failed to load the selected SVG. Please try a different file.');
+                imageUpload.value = '';
+              };
+              img.src = dataUrl;
+            } catch (err) {
+              console.error('Failed parsing SVG:', err);
+              alert('Failed to process the SVG file.');
+              imageUpload.value = '';
+            }
+          };
+          reader.onerror = () => {
+            alert('Failed to read the selected SVG file. Please try again.');
             imageUpload.value = '';
           };
-          img.onerror = () => {
-            alert('Failed to load the selected image. Please try a different file.');
+          reader.readAsText(file);
+        } else {
+          // Raster formats: use Data URL directly
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              console.log('Image loaded:', img.naturalWidth + 'x' + img.naturalHeight);
+              this.canvasManager.addImageElement(img);
+              this.updateLayersPanel();
+
+              // Clear the file input so the same file can be selected again
+              imageUpload.value = '';
+            };
+            img.onerror = () => {
+              alert('Failed to load the selected image. Please try a different file.');
+              imageUpload.value = '';
+            };
+            img.src = event.target.result;
+          };
+          reader.onerror = () => {
+            alert('Failed to read the selected file. Please try again.');
             imageUpload.value = '';
           };
-          img.src = event.target.result;
-        };
-        reader.onerror = () => {
-          alert('Failed to read the selected file. Please try again.');
-          imageUpload.value = '';
-        };
-        reader.readAsDataURL(file);
+          reader.readAsDataURL(file);
+        }
       }
     });
 

@@ -379,13 +379,14 @@ export class CanvasManager {
     return textElement;
   }
 
-  addImageElement(image, x = 100, y = 100) {
+  addImageElement(image, x = 100, y = 100, options = {}) {
     // Scale image to fit within reasonable bounds while maintaining aspect ratio
     const maxWidth = this.canvas.width * 0.4; // Max 40% of canvas width
     const maxHeight = this.canvas.height * 0.4; // Max 40% of canvas height
 
-    let width = image.width;
-    let height = image.height;
+    // Prefer natural dimensions for reliability (SVG/raster)
+    let width = options.width || image.naturalWidth || image.width || 300;
+    let height = options.height || image.naturalHeight || image.height || 150;
 
     // Scale down if image is too large
     if (width > maxWidth || height > maxHeight) {
@@ -798,12 +799,18 @@ export class CanvasManager {
         } else if (element.image) {
           serialized.type = 'image';
           // Convert image to data URL for export
-          const canvas = document.createElement('canvas');
-          canvas.width = element.originalWidth;
-          canvas.height = element.originalHeight;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(element.image, 0, 0);
-          serialized.imageData = canvas.toDataURL();
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = element.originalWidth;
+            canvas.height = element.originalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(element.image, 0, 0);
+            serialized.imageData = canvas.toDataURL();
+          } catch (err) {
+            // If canvas is tainted (e.g., SVG with external refs), fallback to original source
+            console.warn('Falling back to original image src for export:', err);
+            serialized.imageData = element.image.src;
+          }
           delete serialized.image; // Remove the actual image object
         } else if (element.shapeType !== undefined) {
           serialized.type = 'shape';
@@ -959,12 +966,17 @@ export class CanvasManager {
         } else if (element.image) {
           serialized.type = 'image';
           // Convert image to data URL for storage
-          const canvas = document.createElement('canvas');
-          canvas.width = element.originalWidth;
-          canvas.height = element.originalHeight;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(element.image, 0, 0);
-          serialized.imageData = canvas.toDataURL();
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = element.originalWidth;
+            canvas.height = element.originalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(element.image, 0, 0);
+            serialized.imageData = canvas.toDataURL();
+          } catch (err) {
+            console.warn('LocalStorage save fallback to image src:', err);
+            serialized.imageData = element.image.src;
+          }
           delete serialized.image; // Remove the actual image object
         } else if (element.shapeType !== undefined) {
           serialized.type = 'shape';

@@ -3,10 +3,15 @@ export class ImageElement {
     this.x = x;
     this.y = y;
     this.image = image;
-    this.width = options.width || image.width;
-    this.height = options.height || image.height;
-    this.originalWidth = image.width;
-    this.originalHeight = image.height;
+    // Prefer natural dimensions when available to support SVG and raster images reliably
+    const natW = image.naturalWidth || image.width || 0;
+    const natH = image.naturalHeight || image.height || 0;
+    const fallbackW = natW || 300;
+    const fallbackH = natH || 150;
+    this.width = options.width || fallbackW;
+    this.height = options.height || fallbackH;
+    this.originalWidth = natW || fallbackW;
+    this.originalHeight = natH || fallbackH;
     this.rotation = options.rotation || 0;
     this.selected = false;
     this.id = Date.now() + Math.random();

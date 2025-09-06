@@ -11,6 +11,7 @@ A YouTube thumbnail maker I made in 2 hours with Claude Code on my AI coding liv
 - Various background colors and patterns
 - Add title and description to the thumbnail
 - Add logos and photos
+- Upload and edit SVG images
 - Human segmentation model to mask out the background in photos
 
 ## Lines of Code (LOC)
