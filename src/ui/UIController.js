@@ -552,6 +552,8 @@ export class UIController {
     const applyCropBtn = document.getElementById('apply-crop');
     const cancelCropBtn = document.getElementById('cancel-crop');
     const extractPersonBtn = document.getElementById('extract-person');
+    const outlineWidthInput = document.getElementById('image-outline-width');
+    const outlineColorInput = document.getElementById('image-outline-color');
 
     // Image effects controls
     const opacityInput = document.getElementById('image-opacity');
@@ -614,6 +616,19 @@ export class UIController {
       this.canvasManager.updateSelectedElement({ rotation: rotation });
     });
 
+    // Outline controls
+    if (outlineWidthInput) {
+      outlineWidthInput.addEventListener('input', (e) => {
+        const width = Math.max(0, parseInt(e.target.value) || 0);
+        this.canvasManager.updateSelectedElement({ outlineWidth: width });
+      });
+    }
+
+    if (outlineColorInput) {
+      outlineColorInput.addEventListener('change', (e) => {
+        this.canvasManager.updateSelectedElement({ outlineColor: e.target.value });
+      });
+    }
   }
 
   addBackgroundColorPaletteListeners() {
@@ -675,6 +690,13 @@ export class UIController {
       document.getElementById('image-rotation').value =
         Math.round(selectedElement.rotation) || 0;
 
+      // Update outline controls
+      const ow = Math.round(selectedElement.outlineWidth || 0);
+      const oc = selectedElement.outlineColor || '#ffffff';
+      const outlineWidthInput = document.getElementById('image-outline-width');
+      const outlineColorInput = document.getElementById('image-outline-color');
+      if (outlineWidthInput) outlineWidthInput.value = ow;
+      if (outlineColorInput) outlineColorInput.value = oc;
     }
   }
 

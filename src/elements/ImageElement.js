@@ -34,11 +34,50 @@ export class ImageElement {
     this.contrast = options.contrast !== undefined ? options.contrast : 100;
     this.saturation = options.saturation !== undefined ? options.saturation : 100;
 
+    // Outline properties (0 width disables outline)
+    this.outlineWidth = options.outlineWidth !== undefined ? options.outlineWidth : 0;
+    this.outlineColor = options.outlineColor || '#ffffff';
+
+    // Internal caches for outline rendering
+    this._silhouetteCanvas = null;
+    this._silhouetteKey = null;
+    this._outlineCanvas = null;
+    this._outlineKey = null;
+
   }
 
   render(ctx) {
     ctx.save();
 
+    // First, optionally render outline behind the image
+    if (this.outlineWidth > 0) {
+      ctx.save();
+      // Draw outline without image filters/opacity
+      ctx.globalAlpha = 1.0;
+      ctx.filter = 'none';
+
+      if (this.rotation !== 0) {
+        ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+        ctx.rotate((this.rotation * Math.PI) / 180);
+        const outlineCanvas = this._getOutlineCanvas();
+        // Outline canvas has padding of outlineWidth on all sides
+        ctx.drawImage(
+          outlineCanvas,
+          -this.width / 2 - this.outlineWidth,
+          -this.height / 2 - this.outlineWidth
+        );
+      } else {
+        const outlineCanvas = this._getOutlineCanvas();
+        ctx.drawImage(
+          outlineCanvas,
+          this.x - this.outlineWidth,
+          this.y - this.outlineWidth
+        );
+      }
+      ctx.restore();
+    }
+
+    // Now render the image itself with filters/opacity
     // Apply opacity
     ctx.globalAlpha = this.opacity;
 
@@ -272,12 +311,14 @@ export class ImageElement {
       if (this.maintainAspectRatio) {
         this.height = this.width / this.aspectRatio;
       }
+      this._invalidateOutlineCaches();
     }
     if (options.height !== undefined) {
       this.height = options.height;
       if (this.maintainAspectRatio) {
         this.width = this.height * this.aspectRatio;
       }
+      this._invalidateOutlineCaches();
     }
     if (options.rotation !== undefined) this.rotation = options.rotation;
     if (options.opacity !== undefined) this.opacity = options.opacity;
@@ -285,6 +326,14 @@ export class ImageElement {
     if (options.contrast !== undefined) this.contrast = options.contrast;
     if (options.saturation !== undefined) this.saturation = options.saturation;
     if (options.layer !== undefined) this.layer = options.layer;
+    if (options.outlineWidth !== undefined) {
+      this.outlineWidth = Math.max(0, options.outlineWidth);
+      this._invalidateOutlineCaches();
+    }
+    if (options.outlineColor !== undefined) {
+      this.outlineColor = options.outlineColor;
+      this._invalidateOutlineCaches();
+    }
   }
 
 
@@ -314,6 +363,8 @@ export class ImageElement {
     if (this.maintainAspectRatio) {
       this.height = this.width / this.aspectRatio;
     }
+
+    this._invalidateOutlineCaches();
   }
 
   // Reset crop to show full image
@@ -323,6 +374,7 @@ export class ImageElement {
     this.cropWidth = this.originalWidth;
     this.cropHeight = this.originalHeight;
     this.aspectRatio = this.originalWidth / this.originalHeight;
+    this._invalidateOutlineCaches();
   }
 
   // Render crop overlay to show the crop area on original image
@@ -386,5 +438,91 @@ export class ImageElement {
     ctx.strokeRect(this.x, this.y, this.width, this.height);
     ctx.setLineDash([]);
     ctx.restore();
+  }
+
+  _invalidateOutlineCaches() {
+    this._silhouetteCanvas = null;
+    this._silhouetteKey = null;
+    this._outlineCanvas = null;
+    this._outlineKey = null;
+  }
+
+  _getSilhouetteCanvas() {
+    // Build a tinted silhouette of the current displayed image (cropped & scaled)
+    const w = Math.max(1, Math.round(this.width));
+    const h = Math.max(1, Math.round(this.height));
+    const key = [w, h, this.cropX, this.cropY, this.cropWidth, this.cropHeight, this.outlineColor].join(':');
+
+    if (this._silhouetteCanvas && this._silhouetteKey === key) {
+      return this._silhouetteCanvas;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+
+    // Draw the cropped, scaled image
+    ctx.drawImage(
+      this.image,
+      this.cropX,
+      this.cropY,
+      this.cropWidth,
+      this.cropHeight,
+      0,
+      0,
+      w,
+      h
+    );
+
+    // Colorize to a solid silhouette using source-in
+    ctx.globalCompositeOperation = 'source-in';
+    ctx.fillStyle = this.outlineColor;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'source-over';
+
+    this._silhouetteCanvas = canvas;
+    this._silhouetteKey = key;
+    return canvas;
+  }
+
+  _getOutlineCanvas() {
+    const radius = Math.max(0, Math.round(this.outlineWidth));
+    if (radius === 0) {
+      // No outline
+      return this._getSilhouetteCanvas();
+    }
+
+    const w = Math.max(1, Math.round(this.width));
+    const h = Math.max(1, Math.round(this.height));
+    const key = [w, h, this.cropX, this.cropY, this.cropWidth, this.cropHeight, this.outlineColor, radius].join(':');
+
+    if (this._outlineCanvas && this._outlineKey === key) {
+      return this._outlineCanvas;
+    }
+
+    const silhouette = this._getSilhouetteCanvas();
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = w + 2 * radius;
+    outCanvas.height = h + 2 * radius;
+    const outCtx = outCanvas.getContext('2d');
+
+    // Draw multiple offset silhouettes within a circle of "radius" to form the outline
+    // Use putImageData or drawImage; drawImage is GPU-accelerated where available.
+    for (let dy = -radius; dy <= radius; dy++) {
+      const maxDx = Math.floor(Math.sqrt(radius * radius - dy * dy));
+      for (let dx = -maxDx; dx <= maxDx; dx++) {
+        outCtx.drawImage(silhouette, radius + dx, radius + dy);
+      }
+    }
+
+    // Cut out the original silhouette to make a ring
+    outCtx.globalCompositeOperation = 'destination-out';
+    outCtx.drawImage(silhouette, radius, radius);
+    outCtx.globalCompositeOperation = 'source-over';
+
+    this._outlineCanvas = outCanvas;
+    this._outlineKey = key;
+    return outCanvas;
   }
 }

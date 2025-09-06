@@ -61,7 +61,7 @@
             <div class="canvas-controls">
               <div id="text-controls" class="text-controls" style="display: none">
                 <h4>Text Settings</h4>
-                <div class="controls-row">
+              <div class="controls-row">
                   <div class="control-group">
                     <label for="text-content">Text Content:</label>
                     <input
@@ -216,6 +216,24 @@
                       step="1"
                     />
                     <span>°</span>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="image-outline-width">Outline Width:</label>
+                    <input
+                      type="number"
+                      id="image-outline-width"
+                      min="0"
+                      max="30"
+                      value="0"
+                      step="1"
+                    />
+                    <span>px</span>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="image-outline-color">Outline Color:</label>
+                    <input type="color" id="image-outline-color" value="#ffffff" />
                   </div>
 
                   <div class="control-group">

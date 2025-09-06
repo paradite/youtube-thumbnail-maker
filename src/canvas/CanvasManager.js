@@ -605,6 +605,8 @@ export class CanvasManager {
         brightness: originalElement.brightness,
         contrast: originalElement.contrast,
         saturation: originalElement.saturation,
+        outlineWidth: originalElement.outlineWidth,
+        outlineColor: originalElement.outlineColor,
         layer: this.nextLayer++,
       });
 
@@ -978,6 +980,11 @@ export class CanvasManager {
             serialized.imageData = element.image.src;
           }
           delete serialized.image; // Remove the actual image object
+          // Remove transient/cached fields
+          delete serialized._silhouetteCanvas;
+          delete serialized._silhouetteKey;
+          delete serialized._outlineCanvas;
+          delete serialized._outlineKey;
         } else if (element.shapeType !== undefined) {
           serialized.type = 'shape';
         } else if (element.arrowType !== undefined) {
