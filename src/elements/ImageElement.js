@@ -47,10 +47,19 @@ export class ImageElement {
   }
 
   render(ctx) {
+    // Guard: only render when the underlying image is ready
+    const img = this.image;
+    const isImgReady =
+      img &&
+      (img instanceof Image || (typeof HTMLImageElement !== 'undefined' && img instanceof HTMLImageElement)) &&
+      img.complete &&
+      (img.naturalWidth || img.width) > 0 &&
+      (img.naturalHeight || img.height) > 0;
+
     ctx.save();
 
     // First, optionally render outline behind the image
-    if (this.outlineWidth > 0) {
+    if (this.outlineWidth > 0 && isImgReady) {
       ctx.save();
       // Draw outline without image filters/opacity
       ctx.globalAlpha = 1.0;
@@ -97,7 +106,11 @@ export class ImageElement {
       ctx.filter = filters.join(' ');
     }
 
-    if (this.rotation !== 0) {
+    if (!isImgReady) {
+      // Nothing to draw yet
+      ctx.restore();
+      return;
+    } else if (this.rotation !== 0) {
       ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
       ctx.rotate((this.rotation * Math.PI) / 180);
       // Draw cropped image
@@ -501,8 +514,33 @@ export class ImageElement {
     const h = Math.max(1, Math.round(this.height));
     const key = [w, h, this.cropX, this.cropY, this.cropWidth, this.cropHeight, this.outlineColor].join(':');
 
-    if (this._silhouetteCanvas && this._silhouetteKey === key) {
+    // Use cached only if it looks valid
+    if (
+      this._silhouetteCanvas &&
+      this._silhouetteKey === key &&
+      typeof this._silhouetteCanvas.getContext === 'function' &&
+      this._silhouetteCanvas.width > 0 &&
+      this._silhouetteCanvas.height > 0
+    ) {
       return this._silhouetteCanvas;
+    }
+
+    // If image not ready, return a transparent 1x1 canvas to avoid drawImage errors
+    const img = this.image;
+    const isImgReady =
+      img &&
+      (img instanceof Image || (typeof HTMLImageElement !== 'undefined' && img instanceof HTMLImageElement)) &&
+      img.complete &&
+      (img.naturalWidth || img.width) > 0 &&
+      (img.naturalHeight || img.height) > 0;
+
+    if (!isImgReady) {
+      const blank = document.createElement('canvas');
+      blank.width = 1;
+      blank.height = 1;
+      this._silhouetteCanvas = blank;
+      this._silhouetteKey = key;
+      return blank;
     }
 
     const canvas = document.createElement('canvas');
@@ -545,7 +583,13 @@ export class ImageElement {
     const h = Math.max(1, Math.round(this.height));
     const key = [w, h, this.cropX, this.cropY, this.cropWidth, this.cropHeight, this.outlineColor, radius].join(':');
 
-    if (this._outlineCanvas && this._outlineKey === key) {
+    if (
+      this._outlineCanvas &&
+      this._outlineKey === key &&
+      typeof this._outlineCanvas.getContext === 'function' &&
+      this._outlineCanvas.width > 0 &&
+      this._outlineCanvas.height > 0
+    ) {
       return this._outlineCanvas;
     }
 

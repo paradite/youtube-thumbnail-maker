@@ -1070,6 +1070,10 @@ export class CanvasManager {
   exportProject() {
     const projectData = {
       elements: this.elements.map((element) => {
+        // Ensure element numbers are valid before serializing
+        if (element && element.image) {
+          this._sanitizeImageElement(element);
+        }
         const serialized = { ...element };
         delete serialized.selected;
 
@@ -1091,6 +1095,11 @@ export class CanvasManager {
             serialized.imageData = element.image.src;
           }
           delete serialized.image; // Remove the actual image object
+          // Remove transient/cached fields
+          delete serialized._silhouetteCanvas;
+          delete serialized._silhouetteKey;
+          delete serialized._outlineCanvas;
+          delete serialized._outlineKey;
         } else if (element.shapeType !== undefined) {
           serialized.type = 'shape';
         } else if (element.arrowType !== undefined) {
@@ -1111,7 +1120,7 @@ export class CanvasManager {
       },
     };
 
-    return JSON.stringify(projectData, null, 2);
+  return JSON.stringify(projectData, null, 2);
   }
 
   async importProject(jsonData) {
@@ -1154,6 +1163,15 @@ export class CanvasManager {
                 elementProps
               );
               imageElement.image = img;
+              // Drop any transient cache fields from imported data
+              delete imageElement._silhouetteCanvas;
+              delete imageElement._silhouetteKey;
+              delete imageElement._outlineCanvas;
+              delete imageElement._outlineKey;
+              this._sanitizeImageElement(imageElement);
+              if (typeof imageElement._invalidateOutlineCaches === 'function') {
+                imageElement._invalidateOutlineCaches();
+              }
               if (elementProps.rotation === undefined) {
                 imageElement.rotation = 0;
               }
@@ -1237,6 +1255,9 @@ export class CanvasManager {
   saveToLocalStorage() {
     const projectData = {
       elements: this.elements.map((element) => {
+        if (element && element.image) {
+          this._sanitizeImageElement(element);
+        }
         const serialized = { ...element };
         delete serialized.selected;
 
@@ -1321,6 +1342,14 @@ export class CanvasManager {
                   elementProps
                 );
                 imageElement.image = img;
+                delete imageElement._silhouetteCanvas;
+                delete imageElement._silhouetteKey;
+                delete imageElement._outlineCanvas;
+                delete imageElement._outlineKey;
+                this._sanitizeImageElement(imageElement);
+                if (typeof imageElement._invalidateOutlineCaches === 'function') {
+                  imageElement._invalidateOutlineCaches();
+                }
                 if (elementProps.rotation === undefined) {
                   imageElement.rotation = 0;
                 }
@@ -1386,6 +1415,8 @@ export class CanvasManager {
 
           this.redrawCanvas();
           this.updateUIAfterLoad();
+          // Persist any sanitized fixes back to localStorage
+          this.saveToLocalStorage();
           console.log('Project loaded from localStorage');
         });
 
@@ -1402,6 +1433,66 @@ export class CanvasManager {
     if (this.onUIUpdate) {
       this.onUIUpdate();
     }
+  }
+
+  _sanitizeImageElement(imageElement) {
+    if (!imageElement || !imageElement.image) return;
+    const isF = (v) => typeof v === 'number' && Number.isFinite(v);
+
+    // Original dimensions
+    const natW = imageElement.image.naturalWidth || imageElement.originalWidth || imageElement.width || 1;
+    const natH = imageElement.image.naturalHeight || imageElement.originalHeight || imageElement.height || 1;
+    imageElement.originalWidth = Math.max(1, Math.round(isF(imageElement.originalWidth) ? imageElement.originalWidth : natW));
+    imageElement.originalHeight = Math.max(1, Math.round(isF(imageElement.originalHeight) ? imageElement.originalHeight : natH));
+
+    // Crop area
+    let cx = isF(imageElement.cropX) ? Math.round(imageElement.cropX) : 0;
+    let cy = isF(imageElement.cropY) ? Math.round(imageElement.cropY) : 0;
+    let cw = isF(imageElement.cropWidth) ? Math.round(imageElement.cropWidth) : imageElement.originalWidth;
+    let ch = isF(imageElement.cropHeight) ? Math.round(imageElement.cropHeight) : imageElement.originalHeight;
+
+    // Clamp crop to original bounds
+    cw = Math.max(1, Math.min(cw, imageElement.originalWidth));
+    ch = Math.max(1, Math.min(ch, imageElement.originalHeight));
+    cx = Math.max(0, Math.min(cx, imageElement.originalWidth - 1));
+    cy = Math.max(0, Math.min(cy, imageElement.originalHeight - 1));
+    if (cx + cw > imageElement.originalWidth) cx = imageElement.originalWidth - cw;
+    if (cy + ch > imageElement.originalHeight) cy = imageElement.originalHeight - ch;
+
+    imageElement.cropX = cx;
+    imageElement.cropY = cy;
+    imageElement.cropWidth = cw;
+    imageElement.cropHeight = ch;
+
+    // Display size
+    let w = isF(imageElement.width) && imageElement.width > 0 ? imageElement.width : null;
+    let h = isF(imageElement.height) && imageElement.height > 0 ? imageElement.height : null;
+    const ratio = cw / ch;
+
+    if (w == null && h != null) {
+      w = Math.max(1, Math.round(h * ratio));
+    } else if (h == null && w != null) {
+      h = Math.max(1, Math.round(w / ratio));
+    } else if (w == null && h == null) {
+      // Fallback: scale crop to fit 40% of canvas
+      const maxW = this.canvas ? this.canvas.width * 0.4 : cw;
+      const maxH = this.canvas ? this.canvas.height * 0.4 : ch;
+      const scale = Math.min(maxW / cw, maxH / ch);
+      w = Math.max(1, Math.round(cw * scale));
+      h = Math.max(1, Math.round(ch * scale));
+    }
+
+    imageElement.width = w;
+    imageElement.height = h;
+
+    // Keep internal aspect ratio in sync with crop
+    imageElement.aspectRatio = cw / ch;
+
+    // Other numeric fields
+    if (!isF(imageElement.opacity)) imageElement.opacity = 1.0;
+    if (!isF(imageElement.brightness)) imageElement.brightness = 100;
+    if (!isF(imageElement.contrast)) imageElement.contrast = 100;
+    if (!isF(imageElement.saturation)) imageElement.saturation = 100;
   }
 
   // Layer management methods
